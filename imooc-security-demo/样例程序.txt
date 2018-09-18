@@ -1,0 +1,11 @@
+/**
+ * 对UserController类的重构
+ * @author Jiangxb
+ *	第一个重构点：
+ *		修改路径映射
+ *		@RequestMapping(value = "/user",method = RequestMethod.GET) ——>@GetMapping("/user")
+ *	第二个重构点：
+ *		将路径映射中“/user” 提到类的@RequestMapping("/user")，然后去掉方法上面的“/user”
+ *		如：@GetMapping("/user")   ——>  @GetMapping
+ *		   @GetMapping("/user/{id:\\d+}") ——> @GetMapping("/{id:\\d+}")
+ */

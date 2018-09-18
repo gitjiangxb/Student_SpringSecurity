@@ -1,0 +1,22 @@
+{
+  "hints": [],
+  "groups": [
+    {
+      "sourceType": "com.imooc.test.ComponentProperties",
+      "name": "local",
+      "type": "com.imooc.test.ComponentProperties"
+    }
+  ],
+  "properties": [
+    {
+      "sourceType": "com.imooc.test.ComponentProperties",
+      "name": "local.host",
+      "type": "java.lang.String"
+    },
+    {
+      "sourceType": "com.imooc.test.ComponentProperties",
+      "name": "local.port",
+      "type": "java.lang.String"
+    }
+  ]
+}

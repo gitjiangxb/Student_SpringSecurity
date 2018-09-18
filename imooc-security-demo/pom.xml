@@ -1,0 +1,84 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>imooc-security-demo</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <parent>
+  	<groupId>com.imooc-security</groupId>
+  	<artifactId>imooc-security</artifactId>
+  	<version>1.0.0-SNAPSHOT</version>
+  	<relativePath>../imooc-security</relativePath>
+  </parent>
+  
+  <dependencies>
+  	<!-- 先引入 imooc-security-browser ；先从浏览器开始讲-->
+  	<dependency>
+  		<groupId>com.imooc-security</groupId>
+  		<artifactId>imooc-security-browser</artifactId>
+  		<version>${imooc.security.version}</version>
+  	</dependency>
+  	<!-- 引入spring boot的 测试框架 -->
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-test</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-data-solr</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-undertow</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.springframework.boot</groupId>
+  		<artifactId>spring-boot-starter-aop</artifactId>
+  	</dependency>
+  	<!-- 常用用来处理IO的包 -->
+  	<dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+     </dependency>
+     <!-- 使用swagger自动生成html文档:依赖 -->
+     <dependency>
+	    <groupId>io.springfox</groupId>
+	    <artifactId>springfox-swagger2</artifactId>
+	    <version>2.7.0</version>
+	 </dependency>
+	 <dependency>
+	    <groupId>io.springfox</groupId>
+	    <artifactId>springfox-swagger-ui</artifactId>
+	    <version>2.7.0</version>
+	 </dependency>
+	 <!-- 使用WireMock快速伪造RESTful服务:依赖 -->
+	 <dependency>
+        <groupId>com.github.tomakehurst</groupId>
+        <artifactId>wiremock</artifactId>
+     </dependency>
+  </dependencies>
+  
+  <!-- 
+  	打包 :配置了这个打的包时可执行的jar；
+  	不需要部署在tomcat里面。因为这个包里面就包含了tomcat。
+  	运行方式：cmd 定位到打包的路径下，
+  		命令：java -jar demo.jar 
+  -->
+  <build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>1.3.3.RELEASE</version>
+				<executions>
+					<execution>
+						<goals>
+							<!-- 按照spring Boot进行打包 -->
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+		<!-- 打包出来的名字 -->
+		<finalName>demo</finalName>
+	</build>
+</project>

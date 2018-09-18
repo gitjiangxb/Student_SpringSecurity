@@ -1,0 +1,39 @@
+{
+  "hints": [],
+  "groups": [
+    {
+      "sourceType": "com.imooc.security.core.properties.MySecurityProperties",
+      "name": "imooc.security",
+      "type": "com.imooc.security.core.properties.MySecurityProperties"
+    },
+    {
+      "sourceType": "com.imooc.security.core.properties.custom.ComponentProperties",
+      "name": "local",
+      "type": "com.imooc.security.core.properties.custom.ComponentProperties"
+    }
+  ],
+  "properties": [
+    {
+      "sourceType": "com.imooc.security.core.properties.MySecurityProperties",
+      "name": "imooc.security.browser",
+      "description": "浏览器相关的配置项\r\n @Fields:browser : TODO",
+      "type": "com.imooc.security.core.properties.BrowserProperties"
+    },
+    {
+      "sourceType": "com.imooc.security.core.properties.MySecurityProperties",
+      "name": "imooc.security.code",
+      "description": "验证码相关的配置项\r\n @Fields:code : TODO",
+      "type": "com.imooc.security.core.properties.ValidateCodeProperties"
+    },
+    {
+      "sourceType": "com.imooc.security.core.properties.custom.ComponentProperties",
+      "name": "local.host",
+      "type": "java.lang.String"
+    },
+    {
+      "sourceType": "com.imooc.security.core.properties.custom.ComponentProperties",
+      "name": "local.port",
+      "type": "java.lang.String"
+    }
+  ]
+}
