@@ -495,7 +495,7 @@ supports方法		   	 	if(!provider.supports(toTest)) // 问provider是否支持�
 		
 小结：
  		
-		
+		提交
 						
 			
 ★系统配置封装类								
