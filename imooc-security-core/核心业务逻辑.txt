@@ -1,0 +1,89 @@
+包目录说明：
+	1、com.imooc.security.core
+		让系统配置相关的类生效
+	2、com.imooc.security.core.authentication
+		表单登录的验证通道
+	3、com.imooc.security.core.authentication.mobile
+		手机短信验证码认证的逻辑(filter、provider、token、config)
+	4、com.imooc.security.core.properties
+		将项目的配置文件以Bean的形式注入spring容器(按照不同的前缀区分是什么类型)
+	5、com.imooc.security.core.properties.custom
+		读取自定义配置文件
+	6、com.imooc.security.core.validate.code
+		验证码(bean、config、filter、controller、exception、、、)
+	7、com.imooc.security.core.validate.code.image
+		图片验证码的bean、generator(生成器)、processor(处理器)
+	8、com.imooc.security.core.validate.code.impl
+		抽象验证码的处理器(创建、校验)
+	9、com.imooc.security.core.validate.code.sms
+		手机短信验证码的bean、generator(生成器)、processor(处理器)、sender(发送器)
+
+项目重构的思想：
+	1、消除重复的代码
+		①、系统凡是手动写两次以上的字符串，应当抽取为 常量接口类
+		②、Bean之间存在较多相同字段属性时，应考虑继承
+			如：图片验证码实体(图片、随机数、过期时间)/手机短信验证码实体(随机数、过期时间)，此时应当采用封装继承来实现。
+		③、很重要的知识点-高级人员应该掌握的：【以增量的方式去适应变化】
+			解释：当出现变化的时候，如图形验证码的逻辑改变了，原来的逻辑不满足了；那么我处理的方式不是去改原来的代码，而是新加一段代码。
+			【ValidateCodeBeanConfig -> @ConditionalOnMissingBean 这个注解★】	
+		④、善用[模板方法抽象] / spring的依赖查找
+	2、以增量去思考变化
+		
+
+
+********************************************************************【主要结构说明】*************************************************************************************************
+系统参数配置代码结构
+										@Configuration	// 用于定义配置类
+										@EnableConfigurationProperties(MySecurityProperties.class)
+										SecurityCoreConfig(为了让MySecurityProperties下面的配置生效)
+												↓
+										@ConfigurationProperties(prefix = "imooc.security")	// 读取以"imooc.security"开头的配置项——>读系统默认的application.properties
+										MySecurityProperties
+												↓ 包含
+			BrowserProperties		ValidateCodeProperties		OAuth2Properties	SocialProperties
+		    	浏览器相关的配置项			验证码相关的配置项	
+										↓ 包含	↓ 包含
+						ImageCodeProperties	 →	SmsCodeProperties
+				图片验证码基本参数配置类    继承   手机短信验证码基本参数配置类
+	
+	说明：
+					
+
+验证码处理器代码结构
+(善用了[模板方法抽象] / spring的依赖查找)
+							ValidateCodeController(验证码的控制器)
+									↓	包含								
+							ValidateCodeProcessorHolder(动态的获取验证码处理器)——根据不同的请求类型去获取不同的处理器，再去调用创建验证码方法
+									↓	包含 - Map<String, ValidateCodeProcessor>
+							ValidateCodeProcessor(验证码处理器接口；创建验证码/校验验证码)
+									↑ 继承
+							AbstractValidateCodeProcessor(抽象验证码处理器：整套逻辑-创建/保存/写或者发送) --包含--> ValidateCodeGenerator(验证码的生成器)两个实现类(SmsCodeGenerator/ImageCodeGenerator)																									
+								抽象类：根据类型(image/sms/..)去调不同的验证码处理器				Map<String, ValidateCodeGenerator>
+								↑继承				↑继承
+					ImageCodeProcessor			SmsCodeProcessor --> SmsCodeSender
+					图片验证码处理器(写到响应里)		短信验证码处理器(发送)		发送需借助 发送器(根据不同的运营商有不同的实现)					
+						
+					生成器：根据不同的类型去生成不同的验证码(image/sms)
+					处理器：根据不同的类型去处理不同的验证码(写IO/发送)	
+					ValidateCodeProcessor 和 ValidateCodeGenerator 有一个分层的作用在里面，具体变化如下
+					[延申：]当整个验证码的生成流程发生了变化时，只需要重新去实现ValidateCodeProcessor接口(你可以将整个流程重写)；
+							如果只是生成验证码的逻辑发生了变化(生成更复杂的验证码等等，但是还是需要经过三步时)只需要实现ValidateCodeGenerator这个接口	
+					
+					
+系统配置相关代码结构					
+										BrowserSecurityConfig(浏览器安全的配置) 	-继承-> AbstractChannelSecurityConfig
+												↓
+					AbstractChannelSecurityConfig.applyPasswordAuthenticationConfig()(表单登录的配置)
+												↓ apply
+										ValidateCodeSecurityConfig(验证码的安全配置)	- 包含-> ValidateCodeFilter(验证码的过滤器) -包含->ValidateCodeProcessorHolder(执行校验验证码逻辑)
+												↓ apply								http.addFilterBefore(V,A)
+										SmsCodeAuthenticationSecurityConfig(手机验证码 【验证】的安全配置，自定义的)		
+												↓ and
+											rememberMe() (浏览器特有的配置(记住我))
+												↓ and
+											authorizeRequests() (浏览器特有的配置(对请求做授权))
+											
+											
+											
+											
+													

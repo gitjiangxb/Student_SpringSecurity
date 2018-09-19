@@ -473,29 +473,46 @@ supports方法		   	 	if(!provider.supports(toTest)) // 问provider是否支持�
 		接下去就是添加配置：
 			⑤、手机验证码的配置：SmsCodeAuthenticationSecurityConfig
 		⑥、最后添加配置到 浏览器安全的配置BrowserSecurityConfig
-	3、重构代码	
+	3、重构代码
+			https://blog.csdn.net/newhanzhe/article/details/81267101
+			https://blog.csdn.net/mr_zhuqiang/article/details/81942367	
 		①、消除重复的代码(将多次出现的字符串抽取为常量)
 		②、优化配置信息(按照类型来区分：如表单登录的配置、验证码的配置(无论是图片验证码/手机短信验证码))
 		总结：
 			善用 HttpSecurity.apply 应用分离之后的配置类
 			程序中有手动写字符串2次的就抽成 SecurityConstants 常量接口类
 			善用 Autowired注解提供的 依赖查找功能
-			善用 类名统一起名
 			善用枚举类 提供相应的支持
-		思想：		
+		善用 类名统一起名 思想：		
 			ValidateCodeProcessor 验证码处理接口
 			ImageValidateCodeProcessor 图片验证码处理接口
 			SmsValidateCodeProcessor 短信验证码处理接口
 			在使用模板方法模式抽取公用逻辑的时候，可以使用前缀获取不同功能支持的动态常量等类容 
 			在外部要动态使用服务的时候，也能用前缀+具体的的父类命名获取到
-			
-			https://blog.csdn.net/newhanzhe/article/details/81267101
-			https://blog.csdn.net/mr_zhuqiang/article/details/81942367
-			
+			如：这里的前缀，配合上面的技巧 善用 Autowired注解提供的 依赖查找功能，使用以下代码就能方便的获取到对应的处理器
+				// 他们都一个共同的父类，有公用的步骤，变化的部分由子类实现；
+				public abstract class AbstractValidateCodeProcessor<C extends ValidateCode> implements ValidateCodeProcessor {
+				  /**
+				   * 根据请求的url获取校验码的类型:
+				   * ValidateCodeProcessorHolder : 中持有所有本类的子类型，获取getClass能拿到具体的实例类名
+				   *		private Map<String, ValidateCodeProcessor> validateCodeProcessors;
+				   * @return
+				   * @see ValidateCodeProcessorHolder
+				   */
+				  private ValidateCodeType getValidateCodeType() {
+				      // 处理器 命名规则：ImageValidateCodeProcessor，拿到前缀即可
+				      // 返回 Image
+				      String type = StringUtils.substringBefore(getClass().getSimpleName(), ValidateCodeProcessor.class.getSimpleName());
+				      return ValidateCodeType.valueOf(type.toUpperCase());
+				  }
+					// 在外部使用 type + ValidateCodeProcessor.class.getSimpleName() 就能获取到完整的类名，也就能使用 ValidateCodeProcessorHolder动态的获取处理器了
+				}
 		
 小结：
+ 	1、要有重构的思想	
  		
-		提交
+ 		
+ 		
 						
 			
 ★系统配置封装类								
