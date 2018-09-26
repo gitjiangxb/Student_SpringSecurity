@@ -67,10 +67,12 @@
 	2、创建一个QQ登录接口：QQ，返回用户信息(需要自定义一个QQ登录用户信息实体)
 	3、创建一个QQ登录接口实现类：QQimpl,需要继承AbstractOAuth2ApiBinding
 		class QQimpl extends AbstractOAuth2ApiBinding implements QQ {...}
+		因为这是自定义接口去实现封装用户信息，因此需要继承AbstractOAuth2ApiBinding
 	4、创建QQ用户实体：QQUserInfo
 	5、查看QQ互联文档：http://wiki.connect.qq.com/get_user_info
 	
-	完成以上步骤，就完成了第六步“获取用户信息”Api的编写，目前暂时利用OAuth2Operations默认的接口。
+	完成以上步骤，就完成了第六步“获取用户信息”Api的编写，
+	目前暂时利用OAuth2Operations默认的接口。
 	接下去创建ServiceProvider(完成第一步到第五步)
 	
 
