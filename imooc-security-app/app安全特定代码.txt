@@ -23,18 +23,18 @@
 		存在的目的：它实际上是一个授权协议，目的是让用户在不将服务提供商的用户名/密码交给第三方应用的情况下，让第三方应用有权限去访问用户保存在服务提供商上面的资源(数据)
 		逻辑流程如图[项目笔记]：
 		代码流程如下：
-			DB							UserConnectionRepository					ServiceProvider
-			UserConnection				(JdbsUsersConnectionRepository)				(AbstractOAuth2ServiceProvider)
+			DB					UserConnectionRepository			ServiceProvider
+			UserConnection		(JdbsUsersConnectionRepository)		(AbstractOAuth2ServiceProvider)
 																					
-										Connection										OAuth2Operations
-										(OAuth2Connection)								(Oauth2Template)
+								Connection								OAuth2Operations
+								(OAuth2Connection)						(Oauth2Template)
 																						
-										ConnectionFactory								Api
-										(OAuth2ConnectionFactory)						(AbstractOAuth2ApiBinding)
+								ConnectionFactory						Api
+								(OAuth2ConnectionFactory)				(AbstractOAuth2ApiBinding)
 																					
-											ServiceProvider
+									ServiceProvider
 										
-											ApiAdapter
+									ApiAdapter
 										
 		说明：
 			ServiceProvider	：服务提供商						
@@ -51,7 +51,7 @@
 											
 				ConnectionFactory：这个工厂负责创建Connection实例，也就是包含了用户信息的对象；要想获取到用户信息的对象，就必须要走前面的流程(第一步到第六步)，因此它包含一个ServiceProvider
 				(OAuth2ConnectionFactory)	 
-					ServiceProvider：封装整个右边，放到这个实例里面
+					ServiceProvider：封装整个右边，然后放到这个实例里面
 					ApiAdapter：负责把不同服务商提供的不同结构的数据(用户信息)转换成Connection标准的数据结构，就需要用到这个接口
 				业务系统里面的用户信息(一般是存在数据库User表里面)如何和服务提供商的用户信息关联在一起？换句话说就是服务提供商里面的A用户，如何对应到张三这个用户；当张三登录如何判断是A用户登录了？
 					这个对应关系是怎么建立的？在Spring Social里面这个对应关系是存在数据库里面的，数据库里面有一张UserConnection表，这个表里存储了你业务系统中User表中的ID和服务提供商的Connection之间的对应关系；

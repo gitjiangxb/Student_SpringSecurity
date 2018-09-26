@@ -35,8 +35,14 @@ public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 	 */
 	private static final String URL_GET_USERINFO = "https://graph.qq.com/user/get_user_info?oauth_consumer_key=%s&openid=%s";
 	
+	/**
+	 * @Fields:appId : TODO 得到用户信息URL_参数
+	 */
 	private String appId;
 	
+	/**
+	 * @Fields:openId : TODO 得到用户信息URL_参数
+	 */
 	private String openId;
 	
 	

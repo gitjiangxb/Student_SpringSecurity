@@ -17,8 +17,8 @@ import com.imooc.security.core.validate.code.sms.SmsCodeSender;
  * @author:Jiangxb
  * @date:2018年9月14日 下午7:33:53
  * 作用：当使用者有不同的验证码生成器的实现，可以通过一定的规则去覆盖掉我们提供的默认接口
- * 	如：图片验证码生成器，若要重写覆盖，只需要创建一个名为“imageValidateCodeGenerator”的Bean；—— DemoImageCodeGenerator
- * 	       手机短信验证码生成器，若要重写覆盖，只需要实现“SmsCodeSender”接口；—— DemoSmsCodeSender
+ * 	如：图片验证码生成器，若要重写覆盖，只需要创建一个名为“imageValidateCodeGenerator”的Bean；并实现“ValidateCodeGenerator”接口—— DemoImageCodeGenerator
+ * 	       发送手机短信验证码，若要重写覆盖，只需要实现“SmsCodeSender”接口；—— DemoSmsCodeSender
  * 不管你怎么覆盖/重写，只要按照上面的命名格式，系统都会调用自定义的，从而覆盖掉默认提供的
  */
 @Configuration

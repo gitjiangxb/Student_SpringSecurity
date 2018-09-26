@@ -17,6 +17,8 @@
 		抽象验证码的处理器(创建、校验)
 	9、com.imooc.security.core.validate.code.sms
 		手机短信验证码的bean、generator(生成器)、processor(处理器)、sender(发送器)
+	10、com.imooc.security.core.social.qq.api
+		
 
 项目重构的思想：
 	1、消除重复的代码
@@ -67,7 +69,9 @@
 					处理器：根据不同的类型去处理不同的验证码(写IO/发送)	
 					ValidateCodeProcessor 和 ValidateCodeGenerator 有一个分层的作用在里面，具体变化如下
 					[延申：]当整个验证码的生成流程发生了变化时，只需要重新去实现ValidateCodeProcessor接口(你可以将整个流程重写)；
-							如果只是生成验证码的逻辑发生了变化(生成更复杂的验证码等等，但是还是需要经过三步时)只需要实现ValidateCodeGenerator这个接口	
+							如果只是生成验证码的逻辑发生了变化(生成更复杂的验证码等等，但是还是需要经过三步时)只需要实现ValidateCodeGenerator这个接口
+							
+					【重点】——【ValidateCodeBeanConfig -> @ConditionalOnMissingBean 这个注解★】
 					
 					
 系统配置相关代码结构					
