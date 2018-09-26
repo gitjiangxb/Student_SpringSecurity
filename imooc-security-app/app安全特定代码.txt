@@ -45,7 +45,7 @@
 					
 					Api	： 需要自己去写一个接口，来封装用户信息；也就是第六步 				
 					(AbstractOAuth2ApiBinding)						
-			接下去看跟第七步相关的类：
+			接下去跟第七步相关的类：
 				Connection ：封装前六步获取到的用户信息，它是由ConnectionFactory创建出来的，							
 				(OAuth2Connection)							
 											
@@ -58,4 +58,26 @@
 					那么由谁来操作这个UserConnection这张表啦？由UserConnectionRepository来操作。
 						
 						UserConnectionRepository：存储器
-						(JdbsUsersConnectionRepository)：实现类，作用：针对数据库里面的UserConnection表做一些增删改查操作 
+						(JdbcUsersConnectionRepository)：实现类，作用：针对数据库里面的UserConnection表做一些增删改查操作 
+						
+						
+
+开发QQ登录：
+	1、创建一个新包：com.imooc.security.core.social.qq.api
+	2、创建一个QQ登录接口：QQ，返回用户信息(需要自定义一个QQ登录用户信息实体)
+	3、创建一个QQ登录接口实现类：QQimpl,需要继承AbstractOAuth2ApiBinding
+		class QQimpl extends AbstractOAuth2ApiBinding implements QQ {...}
+	4、创建QQ用户实体：QQUserInfo
+	5、查看QQ互联文档：http://wiki.connect.qq.com/get_user_info
+	
+	完成以上步骤，就完成了第六步“获取用户信息”Api的编写，目前暂时利用OAuth2Operations默认的接口。
+	接下去创建ServiceProvider(完成第一步到第五步)
+	
+
+
+
+
+
+
+
+			
