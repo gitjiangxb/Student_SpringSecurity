@@ -1,4 +1,4 @@
-package com.imooc.security.core.social.qq.connet;
+package com.imooc.security.core.social.qq.connect;
 
 import org.springframework.social.oauth2.AbstractOAuth2ServiceProvider;
 import org.springframework.social.oauth2.OAuth2Operations;
