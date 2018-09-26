@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * @Package:com.imooc.security.core.validate.code
  * @ClassName:ValidateCodeProcessorHolder
- * @Description:TODO 验证码处理器拥有者
+ * @Description:TODO 动态的获取验证码处理器
  * @author:Jiangxb
  * @date:2018年9月16日 下午11:30:13
  * 

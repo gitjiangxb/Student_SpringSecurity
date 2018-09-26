@@ -184,6 +184,7 @@ public abstract class AbstractValidateCodeProcessor<C extends ValidateCode> impl
 	 * @date: 2018年9月17日 上午10:53:01
 	 */
 	private ValidateCodeType getValidateCodeType(ServletWebRequest request) {
+		// getClass().getSimpleName() 获取源代码中给出的“底层类”简称。
 		String type = StringUtils.substringBefore(getClass().getSimpleName(), "CodeProcessor");
 		return ValidateCodeType.valueOf(type.toUpperCase());
 	}
