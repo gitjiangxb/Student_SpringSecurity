@@ -74,7 +74,14 @@
 	完成以上步骤，就完成了第六步“获取用户信息”Api的编写，
 	目前暂时利用OAuth2Operations默认的接口。
 	接下去创建ServiceProvider(完成第一步到第五步)
-	
+	6、创建一个新包：com.imooc.security.core.social.qq.connet
+	7、创建自定义的服务提供商：QQServiceProvider
+		注意：它需要两部分
+			当它需要OAuth2Operations，我
+		  		new OAuth2Template(appId, appSecret, URL_AUTHORIZE, URL_ACCESSTOKEN)
+		   	当它需要Api，我
+		   		new QQimpl(accessToken, appId);
+	到这里为止 跟ServiceProvider(服务提供商)相关的代码就完成了。
 
 
 

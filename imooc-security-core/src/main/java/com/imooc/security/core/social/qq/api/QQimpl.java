@@ -22,6 +22,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *  	oauth_consumer_key：申请QQ登录成功后，分配给应用的appid
  *  	openid：用户的ID，与QQ号码一一对应。 
  *			可通过调用https://graph.qq.com/oauth2.0/me?access_token=YOUR_ACCESS_TOKEN 来获取。
+ *这个类是多实例的，不能在这里利用@Component注解声明成spring的组件；否则它就是单例的
+ *	若是单例的，AbstractOAuth2ApiBinding的全局变量就存在线程安全问题
  */
 public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 
@@ -86,6 +88,7 @@ public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 		 * callback( {"client_id":"YOUR_APPID","openid":"YOUR_OPENID"} );
 		 */
 		String result = getRestTemplate().getForObject(url, String.class);
+		
 		System.out.println("得到openidAPI的返回结果：" + result);
 		// 截取得到openid 
 		this.openId = StringUtils.substringBetween(result, "\"openid\":", "}");
@@ -97,6 +100,7 @@ public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 		String url = String.format(URL_GET_USERINFO, appId,openId);
 		// 发送get请求，去获取用户信息
 		String result = getRestTemplate().getForObject(url, String.class);
+		
 		System.out.println("得到用户信息的返回结果：" + result);
 		// 利用ObjectMapper工具类
 		return objectMapper.readValue(result, QQUserInfo.class);
