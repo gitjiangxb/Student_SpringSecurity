@@ -110,8 +110,24 @@
 			【说明：】MyUserDetailsService实际上应该是由业务系统提供的，因为只有业务系统才知道如何根据username/userId去数据库里面找到
 					相应的数据，所以这个类不应该写在imooc-security-browser项目里，而是应该写在imooc-security-demo项目里面
 					在imooc-security-demo项目中新建包：com.imooc.security,然后将MyUserDetailsService移动到这个包下
-
-
+	到目前为止还差配置：
+		①、appId, appSecret
+			新建：QQproperties配置类，同时新建SocialProperties社交软件配置类，并将其添加加入，如：★系统配置封装类 说明	
+			在QQproperties配置类中包含三个配置项：appId appSecret providerId，这些配置项在哪里用？
+				QQConnectionFactory的构造函数需要这三个配置项
+					新建包：com.imooc.security.core.social.qq.config
+					新建配置类：QQAutoConfig
+			还有一个很重要的配置：
+				SocialAuthenticationFilter，就是SpringSocial最终要加到Spring Security过滤器链上的过滤器
+					过滤器的配置：SocialConfig里面添加一个方法imoocSocialSecurityConfig()
+					同时需要去浏览器安全配置中引入创建的配置：
+						BrowserSecurityConfig
+							@Autowired
+							private SpringSocialConfigurer imoocSocialSecurityConfig;
+							然后：
+								.apply(imoocSocialSecurityConfig)	// 社交登录的配置
+		②、页面上添加QQ登录的入口
+			
 
 
 
