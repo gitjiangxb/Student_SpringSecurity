@@ -475,7 +475,7 @@ supports方法		   	 	if(!provider.supports(toTest)) // 问provider是否支持�
 		⑥、最后添加配置到 浏览器安全的配置BrowserSecurityConfig
 	3、重构代码
 			https://blog.csdn.net/newhanzhe/article/details/81267101
-			https://blog.csdn.net/mr_zhuqiang/article/details/81942367	
+			https://blog.csdn.net/mr_zhuqiang/article/details/81502354
 		①、消除重复的代码(将多次出现的字符串抽取为常量)
 		②、优化配置信息(按照类型来区分：如表单登录的配置、验证码的配置(无论是图片验证码/手机短信验证码))
 		总结：
@@ -519,10 +519,10 @@ supports方法		   	 	if(!provider.supports(toTest)) // 问provider是否支持�
 										MySecurityProperties
 												↓ 包含
 	包含：BrowserProperties	ValidateCodeProperties	OAuth2Properties	SocialProperties
-		    浏览器相关的配置项			验证码相关的配置项	
-		    					↓ 包含	↓ 包含
-		    	ImageCodeProperties		SmsCodeProperties
-		    	图片验证码基本参数配置类		手机短信验证码基本参数配置类
+		    浏览器相关的配置项			验证码相关的配置项							  社交软件相关的配置项
+		    					↓ 包含	↓ 包含							 ↓ 包含
+		    	ImageCodeProperties		SmsCodeProperties		QQproperties
+		    	图片验证码基本参数配置类		手机短信验证码基本参数配置类	 QQ的配置类
 	【写在imooc-security-core模块里面】
 	然后还要写一个类来让SecurityProperties这些配置信息生效
 		SecurityCoreConfig

@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.social.security.SpringSocialConfigurer;
 
 import com.imooc.security.core.authentication.AbstractChannelSecurityConfig;
 import com.imooc.security.core.authentication.mobile.SmsCodeAuthenticationSecurityConfig;
@@ -60,6 +61,13 @@ public class BrowserSecurityConfig extends AbstractChannelSecurityConfig  {
 	 */
 	@Autowired
 	private ValidateCodeSecurityConfig validateCodeSecurityConfig;
+	
+	/**
+	 * @Fields:imoocSocialSecurityConfig : TODO 引入springSocial的配置类
+	 * 在SocialConfig.imoocSocialSecurityConfig(){..}
+	 */
+	@Autowired
+	private SpringSocialConfigurer imoocSocialSecurityConfig;
 	
 	/**
 	 * @Title:persistentTokenRepository
@@ -114,6 +122,8 @@ public class BrowserSecurityConfig extends AbstractChannelSecurityConfig  {
 		http.apply(validateCodeSecurityConfig)			// 验证码相关的配置
 				.and()
 			.apply(smsCodeAuthenticationSecurityConfig)	// 短信验证码【登录】的一些配置
+				.and()
+			.apply(imoocSocialSecurityConfig)	// 社交登录的配置
 				.and()
 			.rememberMe()			// 浏览器特有的配置(记住我)
 				.tokenRepository(persistentTokenRepository())
