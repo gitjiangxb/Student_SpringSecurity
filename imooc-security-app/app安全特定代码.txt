@@ -24,7 +24,7 @@
 		逻辑流程如图[项目笔记]：
 		代码流程如下：
 			DB					UserConnectionRepository			ServiceProvider
-			UserConnection		(JdbsUsersConnectionRepository)		(AbstractOAuth2ServiceProvider)
+			UserConnection		(JdbcUsersConnectionRepository)		(AbstractOAuth2ServiceProvider)
 																					
 								Connection								OAuth2Operations
 								(OAuth2Connection)						(Oauth2Template)
@@ -84,9 +84,32 @@
 	到这里为止 跟ServiceProvider(服务提供商)相关的代码就完成了。
 
 
+	8、创建ConnectionFactory：QQConnectionFactory
+		注意：它需要两部分
+			ServiceProvider：前面几步完成的
+			ApiAdapter：新建QQAdapter
+		
+	9、Connection不需要我们来处理，它由ConnectionFactory使用我们之前写的代码构建出来；那么要把Connection的数据保存到数据里，
+		 还需要JdbcUsersConnectionRepository，这个东西Spring帮我写好了，我们需要把它配置一下
+		新建包：com.imooc.security.core.social
+		新建类：SocialConfig
+	10、创建UserConnection这张表
+		建表SQL：UserConnection.sql
+		若表名需要加前缀：imooc_UserConnection(表名不可变，但可以加前缀),需要修改SocialConfig.getUsersConnectionRepository()
+						repository.setTablePrefix("imooc_");
+		UserConnection表中最重要的字段：
+			userId(业务系统的用户id)
+			providerId(服务提供商的id(QQ/微信))
+			providerUserId(openId)
+			说明：当社交软件登录的过程中，我们实际上是拿到了社交用户的信息(providerId和providerUserId)，然后通过这两个字段拿到userId；
+				拿到userId之后，最后我登录成功后，放到session里面的应该是完整的用户信息，如何从userId里面得到完整的信息？
+				修改：MyUserDetailsService  使其再实现SocialUserDetailsService接口，重写loadUserByUserId方法
+					原：loadUserByUsername()方法是表单登录的时候用的，传入用户在表单上面填写的用户名
+					新加：loadUserByUserId()方法是社交软件登录(QQ/微信)，传入根据(providerId和providerUserId)查出来的userId
 
 
 
 
 
-			
+
+		

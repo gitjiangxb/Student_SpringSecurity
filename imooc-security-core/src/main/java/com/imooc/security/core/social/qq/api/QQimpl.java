@@ -1,5 +1,7 @@
 package com.imooc.security.core.social.qq.api;
 
+import java.io.IOException;
+
 import org.apache.commons.lang.StringUtils;
 import org.springframework.social.oauth2.AbstractOAuth2ApiBinding;
 import org.springframework.social.oauth2.TokenStrategy;
@@ -95,7 +97,7 @@ public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 	}
 	
 	@Override
-	public QQUserInfo getUserInfo() throws Exception {
+	public QQUserInfo getUserInfo(){
 		// 发送请求，获取用户信息;因为构造函数的super(..),会将accessToken传递到请求参数中去
 		String url = String.format(URL_GET_USERINFO, appId,openId);
 		// 发送get请求，去获取用户信息
@@ -103,7 +105,12 @@ public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 		
 		System.out.println("得到用户信息的返回结果：" + result);
 		// 利用ObjectMapper工具类
-		return objectMapper.readValue(result, QQUserInfo.class);
+		try {
+			return objectMapper.readValue(result, QQUserInfo.class);
+		} catch (Exception e) {
+			// 抛出运行时异常
+			throw new RuntimeException("获取用户信息失败",e);
+		}
 	}
 
 }

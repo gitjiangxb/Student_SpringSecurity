@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.social.security.SocialUserDetails;
+import org.springframework.social.security.SocialUserDetailsService;
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,7 +19,7 @@ import org.springframework.stereotype.Component;
  * 
  */
 @Component
-public class MyUserDetailsService implements UserDetailsService {
+public class MyUserDetailsService implements UserDetailsService,SocialUserDetailsService {
 
 	/**
 	 * 这里不操作数据库
@@ -31,9 +33,12 @@ public class MyUserDetailsService implements UserDetailsService {
 	@Autowired
 	private PasswordEncoder passwordEncoder;
 	
+	/**
+	 * 表单登录的时候用的，传入用户在表单上面填写的用户名
+	 */
 	@Override
-	public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
-		logger.info("登录用户名 ： " + s);
+	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		logger.info("登录用户名 ： " + username);
 		// 第一步：根据用户名查找用户信息
 		/**
 		 * org.springframework.security.core.userdetails.User.User(String username, String password, Collection<? extends GrantedAuthority> authorities)
@@ -46,7 +51,7 @@ public class MyUserDetailsService implements UserDetailsService {
 		 * 写完再次启动，运行http://localhost:8080/user
 		 * 		此时用户名可以随便输入，但是密码必须为123456；否则会提示错误
 		 */
-//		return new User(s, "123456", AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
+//		return new User(username, "123456", AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
 		
 		// 第二步：根据查找到的用户信息判断用户是否被冻结
 		/**
@@ -61,7 +66,7 @@ public class MyUserDetailsService implements UserDetailsService {
 		 * 		https://blog.csdn.net/neweastsun/article/details/79360724
 		 * 此时再登录，会提示——Reason: 用户帐号已被锁定
 		 */
-		//return new User(s, "123456", true, true, true, false, AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
+		//return new User(username, "123456", true, true, true, false, AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
 		
 		//第三步：加密与解密;注入PasswordEncoder
 		/**
@@ -77,7 +82,22 @@ public class MyUserDetailsService implements UserDetailsService {
 		 */
 		String password = passwordEncoder.encode("123456");
 		logger.info("数据库密码是：" + password);
-		return new User(s, password, true, true, true, true, AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
+		return new User(username, password, true, true, true, true, AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
+	}
+
+	/**
+	 * @Title:loadUserByUserId
+	 * @Description:TODO 社交软件登录(QQ/微信)，传入根据(providerId和providerUserId)查出来的userId
+	 * @param userId
+	 * @throws UsernameNotFoundException
+	 * @return:SocialUserDetails
+	 * @author:Jiangxb
+	 * @date: 2018年9月26日 下午5:44:25
+	 */
+	@Override
+	public SocialUserDetails loadUserByUserId(String userId) throws UsernameNotFoundException {
+		// TODO 实际要做的是根据userId去构建出一个UserDetails的实现，然后返回回去
+		return null;
 	}
 
 }

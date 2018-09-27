@@ -18,5 +18,5 @@ public interface QQ {
 	 * @throws Exception 
 	 * @date: 2018年9月23日 下午4:10:59
 	 */
-	QQUserInfo getUserInfo() throws Exception;
+	QQUserInfo getUserInfo();
 }
