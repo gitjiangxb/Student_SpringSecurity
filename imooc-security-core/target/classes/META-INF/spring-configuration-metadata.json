@@ -16,14 +16,20 @@
     {
       "sourceType": "com.imooc.security.core.properties.MySecurityProperties",
       "name": "imooc.security.browser",
-      "description": "浏览器相关的配置项\r\n @Fields:browser : TODO",
+      "description": "@Fields:browser : TODO 浏览器相关的配置项",
       "type": "com.imooc.security.core.properties.BrowserProperties"
     },
     {
       "sourceType": "com.imooc.security.core.properties.MySecurityProperties",
       "name": "imooc.security.code",
-      "description": "验证码相关的配置项\r\n @Fields:code : TODO",
+      "description": "@Fields:code : TODO 验证码相关的配置项",
       "type": "com.imooc.security.core.properties.ValidateCodeProperties"
+    },
+    {
+      "sourceType": "com.imooc.security.core.properties.MySecurityProperties",
+      "name": "imooc.security.social",
+      "description": "@Fields:social : TODO 验证码相关的配置项",
+      "type": "com.imooc.security.core.properties.SocialProperties"
     },
     {
       "sourceType": "com.imooc.security.core.properties.custom.ComponentProperties",

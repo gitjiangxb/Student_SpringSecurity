@@ -3,6 +3,7 @@ package com.imooc.security.core.social;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.social.config.annotation.EnableSocial;
@@ -10,6 +11,7 @@ import org.springframework.social.config.annotation.SocialConfigurerAdapter;
 import org.springframework.social.connect.ConnectionFactoryLocator;
 import org.springframework.social.connect.UsersConnectionRepository;
 import org.springframework.social.connect.jdbc.JdbcUsersConnectionRepository;
+import org.springframework.social.security.SpringSocialConfigurer;
 
 /**
  * @Package:com.imooc.security.core.social
@@ -50,5 +52,17 @@ public class SocialConfig extends SocialConfigurerAdapter {
 //		JdbcUsersConnectionRepository repository = new JdbcUsersConnectionRepository(dataSource, connectionFactoryLocator, Encryptors.noOpText());
 //		repository.setTablePrefix("imooc_");	// 加了前缀的配置
 //		return repository;
+	}
+	
+	/**
+	 * @Title:imoocSocialSecurityConfig
+	 * @Description:TODO SpringSocial添加到过滤器链的配置
+	 * @return:SpringSocialConfigurer
+	 * @author:Jiangxb
+	 * @date: 2018年9月27日 下午4:54:56
+	 */
+	@Bean
+	public SpringSocialConfigurer imoocSocialSecurityConfig() {
+		return new SpringSocialConfigurer();
 	}
 }
