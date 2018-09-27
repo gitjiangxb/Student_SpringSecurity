@@ -93,6 +93,7 @@
 		 还需要JdbcUsersConnectionRepository，这个东西Spring帮我写好了，我们需要把它配置一下
 		新建包：com.imooc.security.core.social
 		新建类：SocialConfig
+		
 	10、创建UserConnection这张表
 		建表SQL：UserConnection.sql
 		若表名需要加前缀：imooc_UserConnection(表名不可变，但可以加前缀),需要修改SocialConfig.getUsersConnectionRepository()
@@ -106,7 +107,9 @@
 				修改：MyUserDetailsService  使其再实现SocialUserDetailsService接口，重写loadUserByUserId方法
 					原：loadUserByUsername()方法是表单登录的时候用的，传入用户在表单上面填写的用户名
 					新加：loadUserByUserId()方法是社交软件登录(QQ/微信)，传入根据(providerId和providerUserId)查出来的userId
-
+			【说明：】MyUserDetailsService实际上应该是由业务系统提供的，因为只有业务系统才知道如何根据username/userId去数据库里面找到
+					相应的数据，所以这个类不应该写在imooc-security-browser项目里，而是应该写在imooc-security-demo项目里面
+					在imooc-security-demo项目中新建包：com.imooc.security,然后将MyUserDetailsService移动到这个包下
 
 
 

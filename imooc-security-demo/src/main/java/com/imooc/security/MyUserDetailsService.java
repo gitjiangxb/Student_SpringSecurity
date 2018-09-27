@@ -1,4 +1,4 @@
-package com.imooc.security.browser;
+package com.imooc.security;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,14 +9,18 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.social.security.SocialUser;
 import org.springframework.social.security.SocialUserDetails;
 import org.springframework.social.security.SocialUserDetailsService;
 import org.springframework.stereotype.Component;
 
 /**
- * 实现UserDetailsService接口，来自定义用户认证逻辑
- * @author Jiangxb
- * 
+ * @Package:com.imooc.security
+ * @ClassName:MyUserDetailsService
+ * @Description:TODO 实现UserDetailsService接口，来自定义用户认证逻辑
+ * @author:Jiangxb
+ * @date:2018年9月27日 上午10:30:44
+ * 	从browser项目中挪到demo项目中
  */
 @Component
 public class MyUserDetailsService implements UserDetailsService,SocialUserDetailsService {
@@ -38,7 +42,7 @@ public class MyUserDetailsService implements UserDetailsService,SocialUserDetail
 	 */
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		logger.info("登录用户名 ： " + username);
+		logger.info("表单登录用户名 ： " + username);
 		// 第一步：根据用户名查找用户信息
 		/**
 		 * org.springframework.security.core.userdetails.User.User(String username, String password, Collection<? extends GrantedAuthority> authorities)
@@ -80,15 +84,18 @@ public class MyUserDetailsService implements UserDetailsService,SocialUserDetail
 		 * 	保存到数据库里面的跟你此时此刻输入的不一样，但是SpringSecurity会拿你保存的密码的”盐值“进行反推，从而匹配。
 		 * 	这样做的好处：如所有人的密码都一样(123456),但是经过encode后都不一样。
 		 */
-		String password = passwordEncoder.encode("123456");
-		logger.info("数据库密码是：" + password);
-		return new User(username, password, true, true, true, true, AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
+//		String password = passwordEncoder.encode("123456");
+//		logger.info("数据库密码是：" + password);
+//		return new User(username, password, true, true, true, true, AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
+	
+		// 重构
+		return buildUser(username);
 	}
 
 	/**
 	 * @Title:loadUserByUserId
 	 * @Description:TODO 社交软件登录(QQ/微信)，传入根据(providerId和providerUserId)查出来的userId
-	 * @param userId
+	 * @param userId	注意：这里不一定要用userId，只要是唯一的 都可以用
 	 * @throws UsernameNotFoundException
 	 * @return:SocialUserDetails
 	 * @author:Jiangxb
@@ -97,7 +104,26 @@ public class MyUserDetailsService implements UserDetailsService,SocialUserDetail
 	@Override
 	public SocialUserDetails loadUserByUserId(String userId) throws UsernameNotFoundException {
 		// TODO 实际要做的是根据userId去构建出一个UserDetails的实现，然后返回回去
-		return null;
+		logger.info("社交登录用户Id：" + userId);
+		return buildUser(userId);
+	}
+	
+	/**
+	 * @Title:buildUser
+	 * @Description:TODO 登录过程代码重构
+	 * @param user	表单传入：username ; 社交传入：userId
+	 * @return:SocialUserDetails
+	 * @author:Jiangxb
+	 * @date: 2018年9月27日 上午10:18:16
+	 */
+	private SocialUserDetails buildUser(String user) {
+		// 根据用户名查找用户信息
+		// 根据查找到的用户信息判断用户是否被冻结
+		String password = passwordEncoder.encode("123456");
+		logger.info("数据库密码是：" + password);
+		return new SocialUser(user, password, 
+				true, true, true, true, 
+				AuthorityUtils.commaSeparatedStringToAuthorityList("admin"));
 	}
 
 }
