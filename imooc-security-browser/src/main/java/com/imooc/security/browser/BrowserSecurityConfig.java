@@ -45,6 +45,9 @@ public class BrowserSecurityConfig extends AbstractChannelSecurityConfig  {
 	@Autowired
 	private DataSource dataSource;
 	
+	/**
+	 * @Fields:userDetailsService : TODO 用户信息
+	 */
 	@Autowired
 	private UserDetailsService userDetailsService;
 	
@@ -68,6 +71,42 @@ public class BrowserSecurityConfig extends AbstractChannelSecurityConfig  {
 	 */
 	@Autowired
 	private SpringSocialConfigurer imoocSocialSecurityConfig;
+	
+	/**
+	 * configure()方法有三种，只是参数不一样
+	 * 	AuthenticationManagerBuilder
+	 * 	HttpSecurity：它允许对特定的http请求基于安全考虑进行配置；默认情况下，适用于所有的请求，但可以使用
+	 * 				requestMatcher(RequestMatcher)或者其他相似的方法进行限制
+	 * 	WebSecurity
+	 */
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		// 密码相关的一些配置(表单登录方式/成功处理器/失败处理器。。)
+		applyPasswordAuthenticationConfig(http);
+		
+		http.apply(validateCodeSecurityConfig)			// 验证码相关的配置
+				.and()
+			.apply(smsCodeAuthenticationSecurityConfig)	// 短信验证码【登录】的一些配置
+				.and()
+			.apply(imoocSocialSecurityConfig)	// 社交登录的配置
+				.and()
+			.rememberMe()			// 浏览器特有的配置(记住我)
+				.tokenRepository(persistentTokenRepository())
+				.tokenValiditySeconds(mySecurityProperties.getBrowser().getRememberMeSeconds())
+				.userDetailsService(userDetailsService)
+				.and()
+			.authorizeRequests()	// 浏览器特有的配置(对请求做授权)
+				.antMatchers(
+					SecurityConstants.DEFAULT_UNAUTHENTICATION_URL,
+					SecurityConstants.DEFAULT_LOGIN_PROCESSING_URL_MOBILE,
+					mySecurityProperties.getBrowser().getLoginPage(),
+					SecurityConstants.DEFAULT_VALIDATE_CODE_URL_PREFIX+"/*")
+					.permitAll()	// 匹配到这个url时，不需要身份认证
+				.anyRequest()		// 任何请求
+				.authenticated()	// 都需要身份认证
+				.and()
+			.csrf().disable();		// 跨站请求伪造防护不可用(disable)
+	} 
 	
 	/**
 	 * @Title:persistentTokenRepository
@@ -106,40 +145,4 @@ public class BrowserSecurityConfig extends AbstractChannelSecurityConfig  {
 		// 这是返回SpringSecurity的加密方式，你可以自己写加密方式，但是必须实现PasswordEncoder接口
 		return new BCryptPasswordEncoder(); 
 	}
-	
-	/**
-	 * configure()方法有三种，只是参数不一样
-	 * 	AuthenticationManagerBuilder
-	 * 	HttpSecurity：它允许对特定的http请求基于安全考虑进行配置；默认情况下，适用于所有的请求，但可以使用
-	 * 				requestMatcher(RequestMatcher)或者其他相似的方法进行限制
-	 * 	WebSecurity
-	 */
-	@Override
-	protected void configure(HttpSecurity http) throws Exception {
-		// 密码相关的一些配置(表单登录方式/成功处理器/失败处理器。。)
-		applyPasswordAuthenticationConfig(http);
-		
-		http.apply(validateCodeSecurityConfig)			// 验证码相关的配置
-				.and()
-			.apply(smsCodeAuthenticationSecurityConfig)	// 短信验证码【登录】的一些配置
-				.and()
-			.apply(imoocSocialSecurityConfig)	// 社交登录的配置
-				.and()
-			.rememberMe()			// 浏览器特有的配置(记住我)
-				.tokenRepository(persistentTokenRepository())
-				.tokenValiditySeconds(mySecurityProperties.getBrowser().getRememberMeSeconds())
-				.userDetailsService(userDetailsService)
-				.and()
-			.authorizeRequests()	// 浏览器特有的配置(对请求做授权)
-				.antMatchers(
-					SecurityConstants.DEFAULT_UNAUTHENTICATION_URL,
-					SecurityConstants.DEFAULT_LOGIN_PROCESSING_URL_MOBILE,
-					mySecurityProperties.getBrowser().getLoginPage(),
-					SecurityConstants.DEFAULT_VALIDATE_CODE_URL_PREFIX+"/*")
-					.permitAll()	// 匹配到这个url时，不需要身份认证
-				.anyRequest()		// 任何请求
-				.authenticated()	// 都需要身份认证
-				.and()
-			.csrf().disable();		// 跨站请求伪造防护不可用(disable)
-	} 
 }

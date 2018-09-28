@@ -63,5 +63,18 @@
 			</tr>
 		</table>
 	</form>
+	<br>
+	
+	<h3>社交登录</h3>
+	<!-- 
+		href="/auth/qq" 【默认的配置情况】
+		说明：auth 是刚刚那个过滤器拦截请求的前缀——SocialAuthenticationFilter
+				就是说所有“/auth”开头的请求都会被这个过滤器拦截
+			qq 就是providerId，也就是在构建ConnectionFactory是创建的那个
+				QQAutoConfig.createConnectionFactory()中传递的第一个参数，系统默认的配置文件是"qq"
+	 -->
+	<!-- <a href="/auth/qq">QQ登录</a> -->
+	<!-- 根据在QQ互联上面申请的 网站回调域：http://www.pinzhi365.com/qqLogin/callback.do 做相应的修改 -->
+	<a href="/qqLogin/callback.do">QQ登录</a>
 </body>
 </html>
