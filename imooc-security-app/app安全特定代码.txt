@@ -21,7 +21,7 @@
 					简化模式(implicit)：
 	2、Spring Social基本原理
 		存在的目的：它实际上是一个授权协议，目的是让用户在不将服务提供商的用户名/密码交给第三方应用的情况下，让第三方应用有权限去访问用户保存在服务提供商上面的资源(数据)
-		逻辑流程如图[项目笔记]：
+		逻辑流程如图[项目笔记]图1：
 		代码流程如下：
 			DB					UserConnectionRepository			ServiceProvider
 			UserConnection		(JdbcUsersConnectionRepository)		(AbstractOAuth2ServiceProvider)
@@ -111,7 +111,7 @@
 					相应的数据，所以这个类不应该写在imooc-security-browser项目里，而是应该写在imooc-security-demo项目里面
 					在imooc-security-demo项目中新建包：com.imooc.security,然后将MyUserDetailsService移动到这个包下
 	到目前为止还差配置：
-		①、appId, appSecret
+		①、appId, appSecret【需要去QQ互联官网申请】
 			新建：QQproperties配置类，同时新建SocialProperties社交软件配置类，并将其添加加入，如：★系统配置封装类 说明	
 			在QQproperties配置类中包含三个配置项：appId appSecret providerId，这些配置项在哪里用？
 				QQConnectionFactory的构造函数需要这三个配置项
@@ -120,6 +120,10 @@
 			还有一个很重要的配置：
 				SocialAuthenticationFilter，就是SpringSocial最终要加到Spring Security过滤器链上的过滤器
 					过滤器的配置：SocialConfig里面添加一个方法imoocSocialSecurityConfig()
+						@Bean
+						public SpringSocialConfigurer imoocSocialSecurityConfig() {
+							return new SpringSocialConfigurer();
+						}
 					同时需要去浏览器安全配置中引入创建的配置：
 						BrowserSecurityConfig
 							@Autowired
@@ -127,8 +131,144 @@
 							然后：
 								.apply(imoocSocialSecurityConfig)	// 社交登录的配置
 		②、页面上添加QQ登录的入口
-			
-
-
-
-		
+			在 imooc-signIn.html 新增：
+				<h3>社交登录</h3>
+				<!-- 
+					href="/auth/qq"
+					说明：auth 是刚刚那个过滤器拦截请求的前缀——SocialAuthenticationFilter
+							就是说所有“/auth”开头的请求都会被这个过滤器拦截，因为SocialAuthenticationFilter的 DEFAULT_FILTER_PROCESSES_URL = "/auth";
+							做成可配置的：SocialProperties下的filterProcessesUrl属性
+						qq 就是providerId，也就是在构建ConnectionFactory是创建的那个
+							QQAutoConfig.createConnectionFactory()中传递的第一个参数，系统默认的配置文件是"qq"
+							做成可配置的：QQproperties下的providerId属性
+				 -->
+				<a href="/auth/qq">QQ登录</a>
+			运行测试：http://localhost:8080/imooc-signIn.html
+				前提是application.properties这个配置文件里面必须配置：(现在值是随便写的，需要去QQ互联中申请)
+					imooc.security.social.qq.app-id = 929723414
+					imooc.security.social.qq.app-secret = 1515
+			会出现错误：redirect uri is illegal(回调地址)
+				|-------------------------------------------------------------------|
+				|	测试使用的：														|
+				|		网站地址：http://www.pinzhi365.com								|
+				|		网站回调域：http://www.pinzhi365.com/qqLogin/callback.do		|
+				|		主办单位名称：													|
+				|		网站备案号：													|
+				|-------------------------------------------------------------------|
+					
+					URL上面的：redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fauth%2Fqq
+					
+					第一步：将用户导入认证服务器，要触发这个我们所访问的地址"/auth/qq"，跟第二步用户同意授权，跳回的地址是同一个地址。
+					
+--------------★【需要做如下的修改：】接下去要改的配置至关重要👇
+					让redirect_uri这个参数跟我们在注册(网站回调域)的时候所写的地址保持一致
+						改域名：实现将域名从localhost:8080 改完 www.pinzhi365.com,改host文件：C:\Windows\System32\drivers\etc 下hosts文件
+						改地址：新建：ImoocSpringSocialConfigurer extends SpringSocialConfigurer，通过重写postProcess这个方法去改变默认的拦截地址("/auth")
+								同时去修改SocialConfig.imoocSocialSecurityConfig()方法，改成使用自定义的配置
+								同时在配置文件中增加：(参考网站回调域地址)
+									imooc.security.social.qq.providerId = callback.do
+									imooc.security.social.filterProcessesUrl = /qqLogin
+								同时修改登录界面的：(参考网站回调域地址)
+										<a href="/qqLogin/callback.do">QQ登录</a>	
+										
+							再次测试：
+								不能输入：http://localhost:8080/imooc-signIn.html
+								应该输入：http://www.pinzhi365.com/imooc-signIn.html
+									点击QQ登录时：redirect_uri=http%3A%2F%2Fwww.pinzhi365.com%2FqqLogin%2Fcallback.do
+								QQ扫码后授权后还是会报错，日志：引发跳转的请求是：http://www.pinzhi365.com/signIn
+									因为“/signIn”这个请求我们还没有做任何的授权，所以界面会显示：{"content":"访问的服务需要身份认证，请引导用户到登录页"}
+									
+							“/signIn”错误的说明：		
+								为什么会跳转到这个“/signIn”请求，接下去了解Spring Social处理整个流程的相关的代码和调用的顺序是什么？如图[项目笔记]图4
+										在OAuth2AuthenticationService去走OAuth流程的时候出现了问题，跟踪进它的代码
+										OAuth2AuthenticationService.getAuthToken()拿取认证的令牌，实际上在走OAuth流程
+											// 从请求中去那code参数，然后去做判断，如果存在授权码code，就认为你是从第三步跳回来的；如果没有授权码，就认为是第一步，
+											// 会抛一个重定向的异常(throw new SocialAuthenticationRedirectException),重定向到QQ的网站上面去；
+											// 有code参数，说明是服务器跳转回来的(带着授权码),然后接下去
+											code = request.getParameter("code"); 
+											// 拿到连接工厂。。。。。；exchangeForAccess()然后拿授权码去换我们的令牌，流程中的第四步和第五步。
+											// 在这步就报错了，说明exchangeForAccess()去拿的时候出现了错误，如下【错误描述1】
+											org.springframework.social.oauth2.AccessGrant accessGrant = getConnectionFactory().getOAuthOperations().exchangeForAccess(code, returnToUrl, null);
+											抛出 RestClientException e;异常，返回null,一直返回null，直到抛到 如下【错误描述2】
+												// 当上面不报错的时候，走这里：如下【成功封装connection】
+												connection = getConnectionFactory().createConnection(accessGrant);	//将accessGrant得到的用户信息封装成一个connection
+												return new SocialAuthenticationToken(connection, null);	//然后将connection放到SocialAuthenticationToken里面[项目笔记]图4
+												
+												
+											【错误描述1】：报错的信息：content type (text/html)
+												getConnectionFactory().getOAuthOperations().exchangeForAccess(code, returnToUrl, null);
+												对应到[项目笔记]图3中
+													ConnectionFactory <—— OAuthOperations的实现中：Oauth2Template
+													接下去看这个类里面去交换AccessToken做了什么？
+														进入到交换的方法里面OAuth2Template.exchangeForAccess() 如下【exchangeForAccess】
+															return postForAccessGrant(accessTokenUrl, params);
+															接下去 ↓
+															protected AccessGrant postForAccessGrant(String accessTokenUrl, MultiValueMap parameters)
+														    {
+														    	// getRestTemplate()用自己的RestTemplate发了一个post请求，发出去请求回来时要把响应的数据转换为map
+														    	// 它用RestTemplate请求，是期望返回的是JSON类型的数据；说明 如下【RestTemplate】【extractAccessGrant】
+														        return extractAccessGrant((Map)getRestTemplate().postForObject(accessTokenUrl, parameters, java/util/Map, new Object[0]));
+														    	
+														    }
+											【错误描述2】		
+												AbstractAuthenticationProcessingFilter.unsuccessfulAuthentication()
+													failureHandler.onAuthenticationFailure(request, response, failed);
+													对于SocialAuthenticationFilter它的失败处理器就是将我们当前的应用重定向到"/signin"
+														SocialAuthenticationFilter.SocialAuthenticationFilter()
+															 delegateAuthenticationFailureHandler = new SimpleUrlAuthenticationFailureHandler("/signin");
+													它就会往"/signin"去跳转，因为我们没有做授权，因此会报后台日志：引发跳转的请求是：http://www.pinzhi365.com/signIn
+       										
+       										【exchangeForAccess】
+       											方法里面封装的参数跟 QQ互联：http://wiki.connect.qq.com/%E4%BD%BF%E7%94%A8authorization_code%E8%8E%B7%E5%8F%96access_token
+       												的Step2：通过Authorization Code获取Access Token  的请求参数 刚好对应上
+       												但是这个方法里面有个判断，为true时才设置值，而useParametersForClientAuthentication默认时false：
+       													if(useParametersForClientAuthentication)
+												        {
+												            params.set("client_id", clientId);
+												            params.set("client_secret", clientSecret);
+												        }
+       												因此需要在自定义的QQOAuth2Template的构造函数中为其设置为true
+       										【extractAccessGrant】
+       											OAuth2Template.
+       											private AccessGrant extractAccessGrant(Map result)
+											    {
+											    	// 这个方法从Map里面去获取access_token、scope等，然后去createAccessGrant()
+											        return createAccessGrant((String)result.get("access_token"), (String)result.get("scope"), (String)result.get("refresh_token"), getIntegerValue(result, "expires_in"), result);
+											    }
+											    
+											    protected AccessGrant createAccessGrant(String accessToken, String scope, String refreshToken, Long expiresIn, Map response)
+											    {
+											    	// 通过这四个参数去 创建一个AccessGrant，这个类是OAuth协议中访问令牌信息的封装，这是spring默认的想法，但是实际上 如下【QQ互联上】
+											        return new AccessGrant(accessToken, scope, refreshToken, expiresIn);
+											    }
+											    
+											 【QQ互联上】
+											 	获取Access_Token的说明：
+											 		在最终返回结果的时候，它返回并不是一个JSON，而是如下这样的一个字符串
+											 			access_token=FE04************************CCE2&expires_in=7776000&refresh_token=88E4************************BE14。
+											 		接下来针对这种特殊的格式来做个处理，需要覆盖postForAccessGrant()方法
+											 		
+       									 	【RestTemplate】
+       									 		使用RestTemplate发请求的时候它是不能处理(text/html)这种content type的响应，为什么不能处理？
+       									 		OAuth2Template.
+	       									 		protected RestTemplate getRestTemplate()
+												    {
+												        if(restTemplate == null)
+												            restTemplate = createRestTemplate();
+												        return restTemplate;
+												    }
+											  	因为它在创建的时候createRestTemplate()；往里面去加HttpMessageConverter的时候，它没有加处理content type(text/html)的这种MessageConverter。
+											  	这个东西就是用来处理响应的。
+											  		目前加了三种：
+											  		converters.add(new FormHttpMessageConverter());
+											        converters.add(new FormMapHttpMessageConverter());
+											        converters.add(new MappingJackson2HttpMessageConverter());	// 处理APPLICATION_JSON的
+												   修改这种错误的方式：
+												   	自定义一个     OAuth2Template，在创建createRestTemplate()的时候，让他可以处理content type(text/html)
+											【成功封装connection】
+												这时会报：日志：引发跳转的请求是：http://www.pinzhi365.com/signup  // 注册流程问题
+												
+						新建：QQOAuth2Template extends OAuth2Template
+							重写：createRestTemplate()方法，去解决不能处理(text/html)这种content type的响应
+							重写：postForAccessGrant()方法，去解决获取Access_Token返回的特殊类型，如上【QQ互联上】
+							同时去修改：QQServiceProvider的构造函数
