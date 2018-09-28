@@ -53,7 +53,10 @@ public class QQServiceProvider extends AbstractOAuth2ServiceProvider<QQ> {
 		 * 最后两个参数：声明为常量，具体参考：
 		 * 	http://wiki.connect.qq.com/%E4%BD%BF%E7%94%A8authorization_code%E8%8E%B7%E5%8F%96access_token
 		 */
-		super(new OAuth2Template(appId, appSecret, URL_AUTHORIZE, URL_ACCESSTOKEN));
+//		super(new OAuth2Template(appId, appSecret, URL_AUTHORIZE, URL_ACCESSTOKEN));
+		// 利用自定义的OAuth2Template去创建
+		super(new QQOAuth2Template(appId, appSecret, URL_AUTHORIZE, URL_ACCESSTOKEN));
+		this.appId = appId;
 	}
 	
 	/* (non-Javadoc)

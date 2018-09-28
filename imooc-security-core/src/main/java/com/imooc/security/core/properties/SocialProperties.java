@@ -11,9 +11,23 @@ package com.imooc.security.core.properties;
 public class SocialProperties {
 	
 	/**
+	 * @Fields:filterProcessesUrl : TODO QQ登录的回调
+	 */
+	private String filterProcessesUrl = "/auth";
+	
+	/**
 	 * @Fields:qq : TODO QQ的配置文件
 	 */
 	private QQproperties qq = new QQproperties();
+	
+
+	public String getFilterProcessesUrl() {
+		return filterProcessesUrl;
+	}
+
+	public void setFilterProcessesUrl(String filterProcessesUrl) {
+		this.filterProcessesUrl = filterProcessesUrl;
+	}
 
 	public QQproperties getQq() {
 		return qq;
