@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>注册</title>
+</head>
+<body>
+	<h2>Demo 注册页</h2>
+	<!-- 注册请求的服务应该是由用户自己来写的 -->
+	<form action="/user/regist" method="post">
+		<table>
+			<tr>
+				<td>用户名：</td>
+				<td><input type="text" name="username"></td>
+			</tr>
+			<tr>
+				<td>密     码：</td>
+				<td><input type="password" name="password"></td>
+			</tr>
+			<!-- 
+				说明：因为我们是在第三方登录的过程中，因为第一次用第三方用户来登录，引发的跳转到注册页上面；
+					有两种可能：
+						1、这个用户在我的系统里面是全新的用户，它以前页没有用用户名和密码登录过，那么这时候它可能是注册一个全新的用户
+						2、它有用户名和密码，那么这时候做的事情就不是注册了  而是 绑定，将第三方用户(QQ用户)绑定到已有的用户上面
+					不管它是注册 还是 绑定 都会跳转到"/user/regist"这个请求里面去
+			 -->
+			<tr>
+				<td colspan="2">
+					<!-- 注册的时候应该还有确认密码等等 -->
+					<button type="submit" name = "type" value="regist">注册</button>
+					<button type="submit" name = "type" value="binding">绑定</button>
+				</td>
+			</tr>
+		</table>
+	</form>
+</body>
+</html>

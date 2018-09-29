@@ -3,10 +3,12 @@ package com.imooc.web.controller;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.social.connect.web.ProviderSignInUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.ServletWebRequest;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.imooc.dto.User;
@@ -206,6 +210,32 @@ import io.swagger.annotations.ApiParam;
 @RequestMapping("/user")
 public class UserController {
 	
+	/**
+	 * @Fields:providerSignInUtils : TODO 注入获取用户信息工具类
+	 */
+	@Autowired
+	private ProviderSignInUtils providerSignInUtils;
+	
+	/**
+	 * @Title:regist
+	 * @Description:TODO 注册用户
+	 * @param user
+	 * @return:void
+	 * @author:Jiangxb
+	 * @date: 2018年9月29日 上午11:22:19
+	 */
+	@PostMapping("/regist")
+	public void regist(User user,HttpServletRequest request) {
+		// 不管注册用户 还是绑定用户，都会拿到一个用户唯一标识
+		String userId = user.getUsername();	// 让填写的用户名作为唯一标识
+		
+		/**
+		 * 这里不去写注册流程，这里只处理将userId传递给Spring Social，
+		 * 	然后Spring Social拿到这个userId后，跟它之前拿到的社交用户的信息
+		 * (connection)一起保存起来(保存到数据库UserConnection表里)
+		 */
+		providerSignInUtils.doPostSignUp(userId, new ServletWebRequest(request));
+	}
 	
 	/**
 	 * @Title:getCurrentUser
