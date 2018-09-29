@@ -9,9 +9,12 @@ import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.social.config.annotation.EnableSocial;
 import org.springframework.social.config.annotation.SocialConfigurerAdapter;
 import org.springframework.social.connect.ConnectionFactoryLocator;
+import org.springframework.social.connect.ConnectionSignUp;
 import org.springframework.social.connect.UsersConnectionRepository;
 import org.springframework.social.connect.jdbc.JdbcUsersConnectionRepository;
+import org.springframework.social.connect.web.ProviderSignInUtils;
 import org.springframework.social.security.SpringSocialConfigurer;
+import org.springframework.stereotype.Component;
 
 import com.imooc.security.core.properties.MySecurityProperties;
 
@@ -41,6 +44,12 @@ public class SocialConfig extends SocialConfigurerAdapter {
 	private MySecurityProperties mySecurityProperties;
 	
 	/**
+	 * @Fields:connectionSignUp : TODO 注入用户信息注册接口
+	 */
+	@Autowired(required = false)
+	private ConnectionSignUp connectionSignUp;
+	
+	/**
 	 * 操作数据库的UserConnection这张表
 	 */
 	@Override
@@ -52,7 +61,16 @@ public class SocialConfig extends SocialConfigurerAdapter {
 		 * textEncryptor:帮你把插入数据库的数据进行 加解密的工具;
 		 * 			目前这里不做任何操作，原样插入进去(Encryptors.noOpText())
 		 */
-		return new JdbcUsersConnectionRepository(dataSource, connectionFactoryLocator, Encryptors.noOpText());
+		JdbcUsersConnectionRepository repository = new JdbcUsersConnectionRepository(dataSource, connectionFactoryLocator, Encryptors.noOpText());
+		/**
+		 * 如果用户配置了，就将其set进去
+		 * 	DemoConnectionSignUp声明为@Component
+		 */
+		if(connectionSignUp != null) {
+			repository.setConnectionSignUp(connectionSignUp);
+		}
+		
+		return repository;
 		
 		/**
 		 * 若表加了前缀。需要配置
@@ -84,6 +102,28 @@ public class SocialConfig extends SocialConfigurerAdapter {
 		 */
 		String filterProcessesUrl = mySecurityProperties.getSocial().getFilterProcessesUrl();
 		ImoocSpringSocialConfigurer configurer = new ImoocSpringSocialConfigurer(filterProcessesUrl);
+		// 为其添加自己(配置里面读)的注册页面
+		configurer.signupUrl(mySecurityProperties.getBrowser().getSignUpUrl());
 		return configurer;
 	}
+	
+	/**
+	 * @Title:providerSignInUtils
+	 * @Description:TODO 解决两个问题
+	 * @return:ProviderSignInUtils
+	 * @author:Jiangxb
+	 * @date: 2018年9月29日 下午1:42:46
+	 * 	1、在注册过程中如何拿到Spring Social的信息——connection信息
+	 * 	2、注册完成后，如何把业务系统的userId传递给Spring Social
+	 */
+	@Bean
+	public ProviderSignInUtils providerSignInUtils(ConnectionFactoryLocator connectionFactoryLocator) {
+		/**
+		 * 需要两个参数：
+		 * 	ConnectionFactoryLocator：它是原来定位connectionFactory，这个Spring Boot已经提供了；要么利用@Autowired注入，要么利用参数注入；
+		 * 	UsersConnectionRepository：调上面这个方法就可以了getUsersConnectionRepository()
+		 */
+		return new ProviderSignInUtils(connectionFactoryLocator, getUsersConnectionRepository(connectionFactoryLocator));
+	}
+	
 }

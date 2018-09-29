@@ -3,6 +3,8 @@ package com.imooc.security.core.social.qq.api;
 import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.social.oauth2.AbstractOAuth2ApiBinding;
 import org.springframework.social.oauth2.TokenStrategy;
 
@@ -28,6 +30,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *	若是单例的，AbstractOAuth2ApiBinding的全局变量就存在线程安全问题
  */
 public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
+	
+	/**
+	 * @Fields:logger : TODO 日志打印
+	 */
+	private Logger logger = LoggerFactory.getLogger(getClass());
 
 	/**
 	 * @Fields:URL_GET_OPENID : TODO 通过access_token得到openId的URL
@@ -91,7 +98,7 @@ public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 		 */
 		String result = getRestTemplate().getForObject(url, String.class);
 		
-		System.out.println("得到openidAPI的返回结果：" + result);
+		logger.info("得到openidAPI的返回结果：" + result);
 		// 截取得到openid 
 		this.openId = StringUtils.substringBetween(result, "\"openid\":\"", "\"}");
 	}
@@ -103,7 +110,7 @@ public class QQimpl extends AbstractOAuth2ApiBinding implements QQ {
 		// 发送get请求，去获取用户信息
 		String result = getRestTemplate().getForObject(url, String.class);
 		
-		System.out.println("得到用户信息的返回结果：" + result);
+		logger.info("得到用户信息的返回结果：" + result);
 		QQUserInfo userInfo = null;
 		// 利用ObjectMapper工具类
 		try {

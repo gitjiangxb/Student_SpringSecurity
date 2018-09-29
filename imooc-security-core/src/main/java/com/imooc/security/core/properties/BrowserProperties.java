@@ -11,6 +11,11 @@ package com.imooc.security.core.properties;
 public class BrowserProperties {
 	
 	/**
+	 * @Fields:signUpUrl : TODO 设置默认的注册界面
+	 */
+	private String signUpUrl = "/imooc-signUp.html";
+	
+	/**
 	 * 设置默认的登录界面方式
 	 * @Fields:loginPage : TODO
 	 */
@@ -29,6 +34,15 @@ public class BrowserProperties {
 	 */
 	private int rememberMeSeconds = 3600;
 	
+	
+	public String getSignUpUrl() {
+		return signUpUrl;
+	}
+
+	public void setSignUpUrl(String signUpUrl) {
+		this.signUpUrl = signUpUrl;
+	}
+
 	public String getLoginPage() {
 		return loginPage;
 	}
