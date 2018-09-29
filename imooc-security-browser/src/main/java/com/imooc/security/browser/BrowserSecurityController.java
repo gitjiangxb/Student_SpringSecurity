@@ -8,18 +8,24 @@ import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
+import org.springframework.social.connect.Connection;
+import org.springframework.social.connect.web.ProviderSignInUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.ServletWebRequest;
 
 import com.imooc.security.browser.supper.SimpleResponse;
+import com.imooc.security.browser.supper.SocialUserInfo;
 import com.imooc.security.core.properties.SecurityConstants;
 import com.imooc.security.core.properties.MySecurityProperties;
 
@@ -54,6 +60,11 @@ public class BrowserSecurityController {
 	@Autowired
 	private MySecurityProperties mySecurityProperties;
 	
+	/**
+	 * @Fields:providerSignInUtils : TODO 注入获取用户信息工具类
+	 */
+	@Autowired
+	private ProviderSignInUtils providerSignInUtils;
 	
 	/**
 	 * @Title:requireAuthentication
@@ -92,5 +103,28 @@ public class BrowserSecurityController {
 		}
 		
 		return new SimpleResponse("访问的服务需要身份认证，请引导用户到登录页");
+	}
+	
+	/**
+	 * @Title:getSocialUserInfo
+	 * @Description:TODO 得到第三方社交用户信息
+	 * @return:SocialUserInfo
+	 * @author:Jiangxb
+	 * @date: 2018年9月29日 下午1:58:10
+	 * 为了返回方便，封装一个社交用户信息实体SocialUserInfo
+	 */
+	@GetMapping("/social/user")
+	public SocialUserInfo getSocialUserInfo(HttpServletRequest request) {
+		SocialUserInfo userInfo = new SocialUserInfo();
+		// 引入用户信息，从刚刚配置的ProviderSignInUtils工具类里面来，注入
+		// getConnectionFromSession  它可以从session中拿到Connection
+		Connection<?> connection = providerSignInUtils.getConnectionFromSession(new ServletWebRequest(request));
+		// 从connection中取出信息 封装成SocialUserInfo
+		userInfo.setProviderId(connection.getKey().getProviderId());
+		userInfo.setProviderUserId(connection.getKey().getProviderUserId());
+		userInfo.setNickname(connection.getDisplayName());
+		userInfo.setHeadimg(connection.getImageUrl());
+		
+		return userInfo;
 	}
 }
