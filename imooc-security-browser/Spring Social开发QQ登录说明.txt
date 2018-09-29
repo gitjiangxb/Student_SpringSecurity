@@ -1,0 +1,469 @@
+二、使用Spring Social开发第三方登录
+	1、OAuth协议简介
+		OAuth协议要解决的问题
+			Token
+		OAuth协议中的各种角色
+			服务提供商(Provider)：提供令牌(Token)，谁提供令牌谁就是服务提供商(如微信)
+				认证服务器(Authorization Server)：作用——认证用户的身份并且产生令牌
+				资源服务器(Resource Server)：作用——保存用户的资源(自拍数据)；验证令牌
+			资源所有者(Resource Owner)：资源指用户的自拍数据，自拍数据真正的所有者是用户而不是微信，(用户)
+			第三方应用(Client)：把微信的用户变成他的用户
+		OAuth协议运行流程
+			如图[项目笔记]：
+			在运行流程中，第二步的“同意授权”很重要：
+				OAuth协议中的授权模式：
+					授权码模式(authorization code)__是这几种中功能最完整、流程最严密的模式：流程如图[项目笔记]
+						两个特点：
+							①、用户同意授权的这个动作是在认证服务器上完成的；而其他的模式是在第三方应用上完成的，然后再发送给认证服务器(注意：第三方可以伪造认证信息)。
+							②、用户同意授权到认证服务器上，认证服务器返回给第三方的时候携带的是授权码而不是最后的Token，第三方收到后需要再发一个请求给认证服务器用授权码去换真正的令牌(Token),然后发给第三方应用的服务器。
+					密码模式(resource owner password credentials)：
+					客户端模式(client credentials)：
+					简化模式(implicit)：
+	2、Spring Social基本原理
+		存在的目的：它实际上是一个授权协议，目的是让用户在不将服务提供商的用户名/密码交给第三方应用的情况下，让第三方应用有权限去访问用户保存在服务提供商上面的资源(数据)
+		逻辑流程如图[项目笔记]图1：
+		代码流程如下：
+			DB					UserConnectionRepository			ServiceProvider
+			UserConnection		(JdbcUsersConnectionRepository)		(AbstractOAuth2ServiceProvider)
+																					
+								Connection								OAuth2Operations
+								(OAuth2Connection)						(Oauth2Template)
+																						
+								ConnectionFactory						Api
+								(OAuth2ConnectionFactory)				(AbstractOAuth2ApiBinding)
+																					
+									ServiceProvider
+										
+									ApiAdapter
+										
+		说明：
+			ServiceProvider	：服务提供商						
+			(AbstractOAuth2ServiceProvider)	：服务提供商 提供的 抽象类(不管是QQ还是微信的服务提供商，只需要继承这个抽象类)		
+				结合逻辑流程图看：第一步到第五步是一个标准的流程(OAuth协议的流程)，而第六步是一个个性化的流程(每一个服务提供商所提供的用户信息的数据结构都是不一样的)，因此存在两个封装：
+					OAuth2Operations ：OAuth协议相关的一些操作，这个接口封装了第一步到第五步				
+					(Oauth2Template) ：Spring Social提供的默认实现	
+					
+					Api	： 需要自己去写一个接口，来封装用户信息；也就是第六步 				
+					(AbstractOAuth2ApiBinding)						
+			接下去跟第七步相关的类：
+				Connection ：封装前六步获取到的用户信息，它是由ConnectionFactory创建出来的，							
+				(OAuth2Connection)							
+											
+				ConnectionFactory：这个工厂负责创建Connection实例，也就是包含了用户信息的对象；要想获取到用户信息的对象，就必须要走前面的流程(第一步到第六步)，因此它包含一个ServiceProvider
+				(OAuth2ConnectionFactory)	 
+					ServiceProvider：封装整个右边，然后放到这个实例里面
+					ApiAdapter：负责把不同服务商提供的不同结构的数据(用户信息)转换成Connection标准的数据结构，就需要用到这个接口
+				业务系统里面的用户信息(一般是存在数据库User表里面)如何和服务提供商的用户信息关联在一起？换句话说就是服务提供商里面的A用户，如何对应到张三这个用户；当张三登录如何判断是A用户登录了？
+					这个对应关系是怎么建立的？在Spring Social里面这个对应关系是存在数据库里面的，数据库里面有一张UserConnection表，这个表里存储了你业务系统中User表中的ID和服务提供商的Connection之间的对应关系；
+					那么由谁来操作这个UserConnection这张表啦？由UserConnectionRepository来操作。
+						
+						UserConnectionRepository：存储器
+						(JdbcUsersConnectionRepository)：实现类，作用：针对数据库里面的UserConnection表做一些增删改查操作 
+						
+						
+
+开发QQ登录：
+	1、创建一个新包：com.imooc.security.core.social.qq.api
+	2、创建一个QQ登录接口：QQ，返回用户信息(需要自定义一个QQ登录用户信息实体)
+	3、创建一个QQ登录接口实现类：QQimpl,需要继承AbstractOAuth2ApiBinding
+		class QQimpl extends AbstractOAuth2ApiBinding implements QQ {...}
+		因为这是自定义接口去实现封装用户信息，因此需要继承AbstractOAuth2ApiBinding
+	4、创建QQ用户实体：QQUserInfo
+	5、查看QQ互联文档：http://wiki.connect.qq.com/get_user_info
+	
+	完成以上步骤，就完成了第六步“获取用户信息”Api的编写，
+	目前暂时利用OAuth2Operations默认的接口。
+	接下去创建ServiceProvider(完成第一步到第五步)
+	
+	6、创建一个新包：com.imooc.security.core.social.qq.connet
+	7、创建自定义的服务提供商：QQServiceProvider
+		注意：它需要两部分
+			当它需要OAuth2Operations，我
+		  		new OAuth2Template(appId, appSecret, URL_AUTHORIZE, URL_ACCESSTOKEN)	// 使用默认的OAuth2Operations的实现类OAuth2Template
+		   	当它需要Api，我
+		   		new QQimpl(accessToken, appId);
+	到这里为止 跟ServiceProvider(服务提供商)相关的代码就完成了。
+
+
+	8、创建ConnectionFactory：QQConnectionFactory
+		注意：它需要两部分
+			ServiceProvider：前面几步完成的
+			ApiAdapter：新建QQAdapter
+		实现：在构造函数中：super(providerId, new QQServiceProvider(appId, appSecret), new QQAdapter());
+			
+	9、Connection不需要我们来处理，它由ConnectionFactory使用我们之前写的代码构建出来；那么要把Connection的数据保存到数据里，
+		 还需要JdbcUsersConnectionRepository，这个东西Spring帮我写好了，我们需要把它配置一下
+		新建包：com.imooc.security.core.social
+		新建类：SocialConfig
+		
+	10、创建UserConnection这张表
+		建表SQL：UserConnection.sql
+		若表名需要加前缀：imooc_UserConnection(表名不可变，但可以加前缀),需要修改SocialConfig.getUsersConnectionRepository()
+						repository.setTablePrefix("imooc_");
+		UserConnection表中最重要的字段：
+			userId(业务系统的用户id)
+			providerId(服务提供商的id(QQ/微信))
+			providerUserId(openId)
+			说明：当社交软件登录的过程中，我们实际上是拿到了社交用户的信息(providerId和providerUserId)，然后通过这两个字段拿到userId；
+				拿到userId之后，最后我登录成功后，放到session里面的应该是完整的用户信息，如何从userId里面得到完整的信息？
+				修改：MyUserDetailsService  使其再实现SocialUserDetailsService接口，重写loadUserByUserId方法
+					原：loadUserByUsername()方法是表单登录的时候用的，传入用户在表单上面填写的用户名
+					新加：loadUserByUserId()方法是社交软件登录(QQ/微信)，传入根据(providerId和providerUserId)查出来的userId
+			【说明：】MyUserDetailsService实际上应该是由业务系统提供的，因为只有业务系统才知道如何根据username/userId去数据库里面找到
+					相应的数据，所以这个类不应该写在imooc-security-browser项目里，而是应该写在imooc-security-demo项目里面
+					在imooc-security-demo项目中新建包：com.imooc.security,然后将MyUserDetailsService移动到这个包下
+					
+	11、到目前为止还差配置：
+		①、appId, appSecret【需要去QQ互联官网申请】
+			新建：QQproperties配置类，同时新建SocialProperties社交软件配置类，并将其添加加入，如：★系统配置封装类 说明	
+			在QQproperties配置类中包含三个配置项：appId appSecret providerId，这些配置项在哪里用？
+				QQConnectionFactory的构造函数需要这三个配置项
+					新建包：com.imooc.security.core.social.qq.config
+					新建配置类：QQAutoConfig
+			还有一个很重要的配置：
+				SocialAuthenticationFilter，就是SpringSocial最终要加到Spring Security过滤器链上的过滤器
+					过滤器的配置：SocialConfig里面添加一个方法imoocSocialSecurityConfig()
+						@Bean
+						public SpringSocialConfigurer imoocSocialSecurityConfig() {
+							return new SpringSocialConfigurer();	// 先采用默认的
+						}
+					同时需要去浏览器安全配置中引入创建的配置：
+						BrowserSecurityConfig
+							@Autowired
+							private SpringSocialConfigurer imoocSocialSecurityConfig;
+							然后：
+								.apply(imoocSocialSecurityConfig)	// 社交登录的配置
+		②、页面上添加QQ登录的入口
+			在 imooc-signIn.html 新增：
+				<h3>社交登录</h3>
+				<!-- 
+					href="/auth/qq"
+					说明：auth 是刚刚那个过滤器拦截请求的前缀——SocialAuthenticationFilter
+							就是说所有“/auth”开头的请求都会被这个过滤器拦截，因为SocialAuthenticationFilter的 DEFAULT_FILTER_PROCESSES_URL = "/auth";
+							做成可配置的：SocialProperties下的filterProcessesUrl属性
+						qq 就是providerId，也就是在构建ConnectionFactory是创建的那个
+							QQAutoConfig.createConnectionFactory()中传递的第一个参数，系统默认的配置文件是"qq"
+							做成可配置的：QQproperties下的providerId属性
+				 -->
+				<a href="/auth/qq">QQ登录</a>
+			运行测试：http://localhost:8080/imooc-signIn.html
+				前提是application.properties这个配置文件里面必须配置：(现在值是随便写的，需要去QQ互联中申请)
+					imooc.security.social.qq.app-id = 929723414
+					imooc.security.social.qq.app-secret = 1515
+			会出现错误：redirect uri is illegal(回调地址)
+				|-------------------------------------------------------------------|
+				|	测试使用的：														|
+				|		网站地址：http://www.pinzhi365.com								|
+				|		网站回调域：http://www.pinzhi365.com/qqLogin/callback.do		|
+				|		主办单位名称：													|
+				|		网站备案号：													|
+				|-------------------------------------------------------------------|
+					
+					URL上面的：redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fauth%2Fqq
+					
+					第一步将用户导入认证服务器，要触发这个我们所访问的地址"/auth/qq"，跟第二步用户同意授权，跳回的地址是同一个地址。
+					
+--------------★【需要做如下的修改：】接下去要改的配置至关重要👇
+					让redirect_uri这个参数跟我们在注册(网站回调域)的时候所写的地址保持一致
+						改域名：实现将域名从localhost:8080 改完 www.pinzhi365.com,改host文件：C:\Windows\System32\drivers\etc 下hosts文件
+						改地址：新建：ImoocSpringSocialConfigurer extends SpringSocialConfigurer，通过重写postProcess这个方法去改变默认的拦截地址("/auth")
+								同时去修改SocialConfig.imoocSocialSecurityConfig()方法，改成使用自定义的配置
+								同时在配置文件中增加：(参考网站回调域地址)
+									imooc.security.social.qq.providerId = callback.do
+									imooc.security.social.filterProcessesUrl = /qqLogin
+								同时修改登录界面的：(参考网站回调域地址)
+										<a href="/qqLogin/callback.do">QQ登录</a>	
+										
+							再次测试：
+								不能输入：http://localhost:8080/imooc-signIn.html
+								应该输入：http://www.pinzhi365.com/imooc-signIn.html
+									点击QQ登录时：redirect_uri=http%3A%2F%2Fwww.pinzhi365.com%2FqqLogin%2Fcallback.do
+								QQ扫码后授权后还是会报错，日志：引发跳转的请求是：http://www.pinzhi365.com/signIn
+									因为“/signIn”这个请求我们还没有做任何的授权，所以界面会显示：{"content":"访问的服务需要身份认证，请引导用户到登录页"}
+									
+							“/signIn”错误的说明：		
+								为什么会跳转到这个“/signIn”请求，接下去了解Spring Social处理整个流程的相关的代码和调用的顺序是什么？如图[项目笔记]图4
+										在OAuth2AuthenticationService去走OAuth流程的时候出现了问题，跟踪进它的代码
+										OAuth2AuthenticationService.getAuthToken()拿取认证的令牌，实际上在走OAuth流程
+											// 从请求中去那code参数，然后去做判断，如果存在授权码code，就认为你是从第三步跳回来的；如果没有授权码，就认为是第一步，
+											// 会抛一个重定向的异常(throw new SocialAuthenticationRedirectException),重定向到QQ的网站上面去；
+											// 有code参数，说明是服务器跳转回来的(带着授权码),然后接下去
+											code = request.getParameter("code"); 
+											// 拿到连接工厂。。。。。；exchangeForAccess()然后拿授权码去换我们的令牌，流程中的第四步和第五步。
+											// 在这步就报错了，说明exchangeForAccess()去拿的时候出现了错误，如下【错误描述1】
+											org.springframework.social.oauth2.AccessGrant accessGrant = getConnectionFactory().getOAuthOperations().exchangeForAccess(code, returnToUrl, null);
+											抛出 RestClientException e;异常，返回null,一直返回null，直到抛到 如下【错误描述2】
+												// 当上面不报错的时候，走这里：如下【成功封装connection】
+												connection = getConnectionFactory().createConnection(accessGrant);	//将accessGrant得到的用户信息封装成一个connection
+												return new SocialAuthenticationToken(connection, null);	//然后将connection放到SocialAuthenticationToken里面[项目笔记]图4
+												
+												
+											【错误描述1】：报错的信息：content type (text/html)
+												getConnectionFactory().getOAuthOperations().exchangeForAccess(code, returnToUrl, null);
+												对应到[项目笔记]图3中
+													ConnectionFactory <—— OAuthOperations的实现中：Oauth2Template
+													接下去看这个类里面去交换AccessToken做了什么？
+														进入到交换的方法里面OAuth2Template.exchangeForAccess() 如下【exchangeForAccess】
+															return postForAccessGrant(accessTokenUrl, params);
+															接下去 ↓
+															protected AccessGrant postForAccessGrant(String accessTokenUrl, MultiValueMap parameters)
+														    {
+														    	// getRestTemplate()用自己的RestTemplate发了一个post请求，发出去请求回来时要把响应的数据转换为map
+														    	// 它用RestTemplate请求，是期望返回的是JSON类型的数据；说明 如下【RestTemplate】【extractAccessGrant】
+														        return extractAccessGrant((Map)getRestTemplate().postForObject(accessTokenUrl, parameters, java/util/Map, new Object[0]));
+														    	
+														    }
+											【错误描述2】		
+												AbstractAuthenticationProcessingFilter.unsuccessfulAuthentication()
+													failureHandler.onAuthenticationFailure(request, response, failed);
+													对于SocialAuthenticationFilter它的失败处理器就是将我们当前的应用重定向到"/signin"
+														SocialAuthenticationFilter.SocialAuthenticationFilter()
+															 delegateAuthenticationFailureHandler = new SimpleUrlAuthenticationFailureHandler("/signin");
+													它就会往"/signin"去跳转，因为我们没有做授权，因此会报后台日志：引发跳转的请求是：http://www.pinzhi365.com/signIn
+       										
+       										【exchangeForAccess】
+       											方法里面封装的参数跟 QQ互联：http://wiki.connect.qq.com/%E4%BD%BF%E7%94%A8authorization_code%E8%8E%B7%E5%8F%96access_token
+       												的Step2：通过Authorization Code获取Access Token  的请求参数 刚好对应上
+       												但是这个方法里面有个判断，为true时才设置值，而useParametersForClientAuthentication默认时false：
+       													if(useParametersForClientAuthentication)
+												        {
+												            params.set("client_id", clientId);
+												            params.set("client_secret", clientSecret);
+												        }
+       												因此需要在自定义的QQOAuth2Template的构造函数中为其设置为true
+       										【extractAccessGrant】
+       											OAuth2Template.
+       											private AccessGrant extractAccessGrant(Map result)
+											    {
+											    	// 这个方法从Map里面去获取access_token、scope等，然后去createAccessGrant()
+											        return createAccessGrant((String)result.get("access_token"), (String)result.get("scope"), (String)result.get("refresh_token"), getIntegerValue(result, "expires_in"), result);
+											    }
+											    
+											    protected AccessGrant createAccessGrant(String accessToken, String scope, String refreshToken, Long expiresIn, Map response)
+											    {
+											    	// 通过这四个参数去 创建一个AccessGrant，这个类是OAuth协议中访问令牌信息的封装，这是spring默认的想法，但是实际上 如下【QQ互联上】
+											        return new AccessGrant(accessToken, scope, refreshToken, expiresIn);
+											    }
+											    
+											 【QQ互联上】
+											 	获取Access_Token的说明：
+											 		在最终返回结果的时候，它返回并不是一个JSON，而是如下这样的一个字符串
+											 			access_token=FE04************************CCE2&expires_in=7776000&refresh_token=88E4************************BE14。
+											 		接下来针对这种特殊的格式来做个处理，需要覆盖postForAccessGrant()方法
+											 		
+       									 	【RestTemplate】
+       									 		使用RestTemplate发请求的时候它是不能处理(text/html)这种content type的响应，为什么不能处理？
+       									 		OAuth2Template.
+	       									 		protected RestTemplate getRestTemplate()
+												    {
+												        if(restTemplate == null)
+												            restTemplate = createRestTemplate();
+												        return restTemplate;
+												    }
+											  	因为它在创建的时候createRestTemplate()；往里面去加HttpMessageConverter的时候，它没有加处理content type(text/html)的这种MessageConverter。
+											  	这个东西就是用来处理响应的。
+											  		目前加了三种：
+											  		converters.add(new FormHttpMessageConverter());
+											        converters.add(new FormMapHttpMessageConverter());
+											        converters.add(new MappingJackson2HttpMessageConverter());	// 处理APPLICATION_JSON的
+												   修改这种错误的方式：
+												   	自定义一个     OAuth2Template，在创建createRestTemplate()的时候，让他可以处理content type(text/html)
+											【成功封装connection】
+												这时会报：日志：引发跳转的请求是：http://www.pinzhi365.com/signup  // 注册流程问题
+						
+							②_①新建：QQOAuth2Template extends OAuth2Template
+								重写：createRestTemplate()方法，去解决不能处理(text/html)这种content type的响应
+								重写：postForAccessGrant()方法，去解决获取Access_Token返回的特殊类型，如上【QQ互联上】
+								同时去修改：QQServiceProvider的构造函数
+							
+							
+					“/signup”问题的说明：
+						上面的步骤已经拿到了用户信息(QQ)，但是在交给AuthenticationProvider去做校验的时候，出现了问题，它把我们导向了“/signup”的路径；
+						为什么会产生这样一个结果和如何解决？如图[项目笔记]图4
+							①、进入SocialAuthenticationProvider的authenticate(Authentication authentication)方法
+								// 	将传入的参数 转换为SocialAuthenticationToken类型
+								SocialAuthenticationToken authToken = (SocialAuthenticationToken)authentication;
+						        String providerId = authToken.getProviderId();
+						        Connection connection = authToken.getConnection();
+						        // 拿到connection里面的key里面的providerId(callback.do) 和 providerUserId(相当于QQ上面的openId)
+						        String userId = toUserId(connection);	【看②】
+						        if(userId == null)	// 因为第一次登录，是拿不到userId的(数据库里面是空的)
+						        	// 抛出这个异常后，由SocialAuthenticationFilter(最上层的过滤器会捕获下层流程中的异常)的doAuthentication()方法去处理  【看③】
+           	 						throw new BadCredentialsException("Unknown access token");
+           	 						
+						    ②、   protected String toUserId(Connection connection)
+							    {
+							    	// SpringSocial拿到值后会用usersConnectionRepository去数据库表里面去查(where providerId = ? and providerUserId = ?)
+							    	// 有没有对应的userId(业务系统的用户id)
+							        List userIds = usersConnectionRepository.findUserIdsWithConnection(connection);
+							        return userIds.size() != 1 ? null : (String)userIds.iterator().next();
+							    }
+							
+							③、SocialAuthenticationFilter.doAuthentication(..){
+									// 判断过滤器上面的signupUrl这个属性是否为空，如果不等于空，会认为你设置了一个注册的页面
+									if(signupUrl != null)
+							        {
+							            sessionStrategy.setAttribute(new ServletWebRequest(request), 
+							            							ProviderSignInAttempt.SESSION_ATTRIBUTE, 
+							            							new ProviderSignInAttempt(token.getConnection()));
+							            // 抛出一个跳转的异常(RedirectException)
+							            throw new SocialAuthenticationRedirectException(buildSignupUrl(request));
+							        } else
+							        {
+							            throw e;
+							        }
+								}
+							
+							④、解决的办法：自己写一个注册页，然后把signupUrl配成我们自己写的注册页，最后配一下授权，让注册页不经过身份认证就可以访问；
+								新建注册页：imooc-signUp.html
+								然后去浏览器的配置里面添加配置项:BrowserProperties
+															private String signUpUrl = "/imooc-signUp.html";
+								然后再项目的配置文件中去创建一个配置项：imooc.security.browser.signUpUrl = /demo-signUp.html
+								新建注册页：demo-signUp.html
+										<form action="/user/regist" method="post">
+											......
+										</form>
+								然后在：imooc-security-demo项目中去处理这个请求；UserController
+										@PostMapping("/regist")
+										public void regist(User user) {
+											// 注册用户 
+										}
+								再然后将注册页的url添加到浏览器的安全配置里面去,让其不需要身份认证：
+									BrowserSecurityConfig.configure()
+										.antMatchers(
+											// 添加这句
+											mySecurityProperties.getBrowser().getSignUpUrl()
+										)
+								最后一步：就是让过滤器知道找不到用户的时候，要跳转到指定的地址：getSignUpUrl
+									SocialConfig.imoocSocialSecurityConfig() {
+										// 添加这句
+										configurer.signupUrl(mySecurityProperties.getBrowser().getSignUpUrl());
+									}
+							验证登录：http://www.pinzhi365.com/imooc-signIn.html，授权成功后跳转到“Demo 注册页”
+									目前只有简单的表单和按钮，
+								新的问题：
+									1、在注册页里面如何 拿到OAuth流程中的用户信息(connection)?
+									2、在点击注册/绑定，我的请求提交到UserController控制器的regist()方法里面进行处理，不管是注册/绑定最终我们能确定用户的唯一标识
+										那么我们的userId，如何再把这个userId传递给Spring Social，让Spring Social把userId跟我之前拿到的那些社交用户的信息
+										(connection)一起保存起来(保存到数据库UserConnection表里)?
+								处理这两个问题：Spring提供了一个工具类：ProviderSignInUtils
+									SocialConfig类下
+										@Bean
+										public ProviderSignInUtils providerSignInUtils(ConnectionFactoryLocator connectionFactoryLocator) {
+											return new ProviderSignInUtils(connectionFactoryLocator, getUsersConnectionRepository(connectionFactoryLocator));
+										}
+									有了这个工具类：我就可以在我的浏览器安全相关的控制器(BrowserSecurityController)里面定义一个方法：
+										处理第一个问题：
+											@GetMapping("/social/user")
+											public SocialUserInfo getSocialUserInfo(HttpServletRequest request) {
+												SocialUserInfo userInfo = new SocialUserInfo();
+												// 引入用户信息，从刚刚配置的ProviderSignInUtils工具类里面来，注入
+												// getConnectionFromSession  它可以从session中拿到Connection 【到session】
+												Connection<?> connection = providerSignInUtils.getConnectionFromSession(new ServletWebRequest(request));
+												。。。。
+												return userInfo;
+											}
+											【到session】：
+												providerSignInUtils.getConnectionFromSession()
+												它从session里面去拿Connection信息，那我们是什么时候把Connection信息放入session的?
+													SocialAuthenticationFilter.doAuthentication(..){
+														// 判断过滤器上面的signupUrl这个属性是否为空，如果不等于空，会认为你设置了一个注册的页面
+														if(signupUrl != null)
+												        {
+												        	// 将Connection从Token里面取出放入session
+												            sessionStrategy.setAttribute(new ServletWebRequest(request), 
+												            							ProviderSignInAttempt.SESSION_ATTRIBUTE, 
+												            							new ProviderSignInAttempt(token.getConnection()));
+												            // 抛出一个跳转的异常(RedirectException)
+												            throw new SocialAuthenticationRedirectException(buildSignupUrl(request));
+												        } else
+												        {
+												            throw e;
+												        }
+													}
+													
+											处理第二个问题：
+												在UserController中，注入
+													@Autowired
+													private ProviderSignInUtils providerSignInUtils;
+												然后改：注册regist()方法
+														@PostMapping("/regist")
+														public void regist(User user,HttpServletRequest request) {
+															// 不管注册用户 还是绑定用户，都会拿到一个用户唯一标识
+															String userId = user.getUsername();	// 让填写的用户名作为唯一标识
+															/**
+															 * 这里不去写注册流程，这里只处理将userId传递给Spring Social，
+															 * 	然后Spring Social拿到这个userId后，跟它之前拿到的社交用户的信息
+															 * (connection)一起保存起来(保存到数据库UserConnection表里)
+															 */
+															providerSignInUtils.doPostSignUp(userId, new ServletWebRequest(request));
+														}
+														
+										新的问题解决了：最后还差一个配置
+											写的这个注册"/regist"也是不需要身份认证就可以访问的，
+												BrowserSecurityConfig.configure()
+													.antMatchers(
+														// 添加这句
+														"/user/regist"
+													)
+							再次验证登录：http://www.pinzhi365.com/imooc-signIn.html，授权成功后跳转到“Demo 注册页”,
+								输入用户名点击注册就会插入数据库一条数据。再次使用第三方登录的时候，就不会跳转到“Demo 注册页”。
+									
+							现在的处理流程是：第一次使用第三方登录时，强制跳转到“Demo 注册页”去注册，但是有的时候不希望跳到“Demo 注册页”；
+								就是QQ或者微信登录进去后，虽然是第一次登录；但是我也不要求你去“Demo 注册页”，而是偷偷的给你注册一个用户。
+								不需要让用户跳转到“Demo 注册页”，而是直接进入系统;这个如何实现？
+								回到[“/signup”问题的说明：]这个问题中，为什么会进入到注册页？回到它的第②步的toUserId()方法
+									跟到JdbcUsersConnectionRepository类的方法里面👇查询逻辑
+										 public List findUserIdsWithConnection(Connection connection)
+									    {
+									        ConnectionKey key = connection.getKey();
+									        List localUserIds = jdbcTemplate.queryForList(“去数据库里面查询的sql”);
+									        // 当在数据库查询的list为空 和 connectionSignUp这个接口不为空时进入
+									        if(localUserIds.size() == 0 && connectionSignUp != null)
+									        {
+									        	// connectionSignUp不为空时，调用它的 execute()方法，这个方法会返回一个 新用户的id
+									            String newUserId = connectionSignUp.execute(connection);	// ★重点
+									            // 新用户id 不为空
+									            if(newUserId != null)
+									            {
+									            	// 它会连同connection信息一起插入到数据库里面
+									                createConnectionRepository(newUserId).addConnection(connection);
+									                return Arrays.asList(new String[] {
+									                    newUserId
+									                });
+									            }
+									        }
+									        return localUserIds;
+									    }
+									看懂上面这段代码后： 
+										现在要的事情就是要在JdbcUsersConnectionRepository里面添加一个connectionSignUp这个接口的实现，给他赋上值就可以了
+										新建：在imooc-security-demo项目中 创建DemoConnectionSignUp
+											@Component
+											public class DemoConnectionSignUp implements ConnectionSignUp {
+												@Override
+												public String execute(Connection<?> connection) {
+													// TODO 根据社交用户信息(connection)默认创建用户并返回用户的唯一标识;这里拿昵称为用户的唯一标识，真实的逻辑根据任务来做
+													return connection.getDisplayName();
+												}
+											
+											}
+										然后在Social的配置类里面做修改：SocialConfig
+											第一步：先注入
+												@Autowired(required = false)
+												private ConnectionSignUp connectionSignUp;
+											第二步：修改getUsersConnectionRepository()方法
+												if(connectionSignUp != null) {
+													repository.setConnectionSignUp(connectionSignUp);
+												}
+										做完这些配置后，就不会管你是否是第一次使用社交软件登录；若是，则会默认注册一个用户
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+							

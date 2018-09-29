@@ -1,0 +1,498 @@
+一、使用Spring Security开发基于表单的登录					
+自定义用户认证逻辑  (UserDetailsService接口)
+	1、处理用户信息返回逻辑  (也可自己写返回的实体，但是必须实现UserDetails接口 )
+		被封装在 UserDetailsService 接口里面，这个接口就一个方法
+		 public abstract UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException;
+		 会根据你输入的userName，去你的存储里面去读取一个用户信息，用户信息被封装在UserDetails接口的实现类里面，当接口信息返回后，
+		 SpringSecurity就会拿着这个信息去做一些处理和校验，如果都通过了就会把这个用户放到Session里面，认为你的登录就成功了;如果
+		 根据输入的用户名找不到就会抛出一个异常UsernameNotFoundException，然后SpringSecurity捕获到这个异常，就会输出相应的
+		 错误信息
+		 返回的实体类说明【UserDetails 属性说明】：
+		 		// 权限信息
+				public abstract Collection getAuthorities();
+				public abstract String getPassword();
+				public abstract String getUsername();
+				// 账户是否过期，过期无法验证(需要自己去判断，若没有设置过期，就返回true)
+				public abstract boolean isAccountNotExpired();
+				// 用户是否被锁定或者解锁，锁定的用户无法进行身份验证
+				public abstract boolean isAccountNonLocked();
+				// 是否已过期的用户的凭证(密码)，过期的凭证防止认证(有的网站安全要求比较高，比如一个月换一次密码)
+				public abstract boolean isCredentialsNonExpired();
+				// 是否被禁用，禁用用户不能进行身份验证(禁用的用户不能恢复，冻结的用户可以恢复)
+				public abstract boolean isEnabled();
+		 		
+		 例：MyUserDetailsService implements UserDetailsService
+	2、处理用户校验逻辑(校验逻辑可以自己写，然后返回布尔值就可以；写在返回实体里面)
+		密码是否匹配(由SpringSecurity来做的，你只要告诉它你从数据库读出来的密码)
+		其他的校验：用户是否冻结、密码是否过期等等
+		MyUserDetailsService重写方法里面第二步
+		
+	3、处理密码加密解密(可自己实现加密/解密，但是必须实现PasswordEncoder接口)
+		被封装在PasswordEncoder接口里面
+			现在在这个包下：package org.springframework.security.crypto.password;
+			早期：package org.springframework.security.authentication.encoding;
+		接口里面包含两个方法：
+			 // 将你的密码进行加密(由自己调用，往数据库里面插入数据时调，然后再保存到数据库里面)	
+			 // (原始的密码做一个加密 返回)
+			 public abstract String encode(CharSequence charsequence);
+			 // 判断加密后的密码 跟 用户传入的 密码是否匹配(由SpringSecurity来调)
+			 // 拿你返回的UserDetails对象里面的密码 跟 你输入的密码进行比对。返回false将抛出异常
+			 // (用户登录输入的密码，前面加密过的原始密码)
+	   		 public abstract boolean matches(CharSequence charsequence, String s);
+   		接下来在BrowserSecurityConfig中配置一下密码
+   			
+个性化用户认证流程
+	1、自定义登录页面(http.formLogin().loginPage("/imooc-signIn.html"))
+		①、在BrowserSecurityConfig配置中的configure处修改
+		②、新建登录页面：resources/resources/imooc-signIn.html
+		③、修改BrowserSecurityConfig配置文件
+			http
+			.formLogin()		// 表单登录风格
+				.loginPage("/imooc-signIn.html")	// 自定义登录界面(必须指定不需要身份认证)
+				/**
+				 *  告诉系统使用UsernamePasswordAuthenticationFilter过滤器来处理，
+				 *  测试时会报403 无效的CSRF token错误 
+				 *  因为：默认情况下SpringSecurity提供了跨站请求伪造的防护(CSRF token来完成)
+				 *  为了让它(表单)能提交，现在先在下面添加：.csrf().disable();
+				 */
+				.loginProcessingUrl("/authentication/form")	
+				.and()
+			.authorizeRequests()	// 对请求做授权
+				.antMatchers("/imooc-signIn.html").permitAll()	// 匹配到这个url时，不需要身份认证
+				.anyRequest()		// 任何请求
+				.authenticated()	// 都需要身份认证
+				.and()
+			.csrf().disable();		// 跨站请求伪造防护不可用(disable)
+			存在两个问题：
+				㈠、处理不同类型的请求(目前不管发生什么都是跳转到loginPage(页面))
+				
+									↓ 接到html请求或者数据请求
+								(是否需要身份认证)
+									↓ 是
+						[跳到一个自定义的Controller方法上]	
+									↓ 在方法内判断
+							(是否是html请求引发的跳转)
+					返回登录页面	←是			否→	返回401状态码和错误信息
+					
+					【修改：】 新建BrowserSecurityController处理请求的控制器；
+							修改.loginPage("/imooc-signIn.html")为 添加的请求服务；
+								.loginPage("/authentication/require")
+							在requireAuthentication()方法里面去判断，遇到第二个问题；
+							未了返回数据方便，封装一个专门用来做返回的简单类SimpleResponse；
+							
+				㈡、可重用的登录界面(这是公用的模块，让他们可以根据自己去配：是使用标准登录页还是使用自己的登录页)
+					在配置文件：application.properties中新建一条配置信息
+						【为了方便，添加了系统配置封装类，说明在最下面】
+						修改配置BrowserSecurityController：
+							.antMatchers("/authentication/require",
+								mySecurityProperties.getBrowser().getLoginPage()).permitAll()
+							
+	2、自定义登录成功处理(AuthenticationSuccessHandler)
+		(成功+积分或者记录日志。。。)
+		①、在SpringSecurity中很简单，只需要实现一个接口：AuthenticationSuccessHandler
+		②、新建类：ImoocAuthenticationSuccessHandler
+			实现：onAuthenticationSuccess(请求，响应，Authentication接口)方法
+			说明：Authentication接口(封装了认证信息)属性说明
+				// 权限列表，通常是代表权限的字符串列表
+				public abstract Collection getAuthorities();
+				// 密码信息，由用户输入的密码凭证，认证之后会移除，来保证安全性
+			    public abstract Object getCredentials();
+				// 细节信息，Web应用中一般是访问者的ip地址和sessionId
+			    public abstract Object getDetails();
+				// 最重要的身份信息，一般返回UserDetails的实现类
+			    public abstract Object getPrincipal();
+				// 是否经过认证
+			    public abstract boolean isAuthenticated();
+		③、做一个配置：让它知道在我登录成功后要用自定义的登录成功处理程序
+			BrowserSecurityController中注入自己写的成功处理程序
+			添加配置：.successHandler(imoocAuthenticationSuccessHandler)
+			测试：以标准登录页为例，登录成功后打印JSON格式(Authentication对象信息)
+			
+	3、自定义登录失败处理(AuthenticationFailureHandler)
+		(失败记录日志或者记录失败的次数。。。)
+		①、在SpringSecurity中很简单，只需要实现一个接口：AuthenticationFailureHandler
+		②、新建类：ImoocAuthenticationFailureHandler
+			实现：onAuthenticationFailure(请求，响应，AuthenticationException类)方法
+			说明：AuthenticationException类
+					包含了在认证过程中发生的错误 和 异常
+		③、做一个配置：让它知道在我登录失败后要用自定义的登录失败处理程序 
+			BrowserSecurityController中注入自己写的失败处理程序
+			添加配置：.failureHandler(imoocAuthenticationFailureHandler)
+			测试：以标准登录页为例，登录失败后打印JSON格式(AuthenticationException类对象信息)
+	4、自定义登录成功/自定义登录失败	(应该以配置文件)
+		像现在这样写死返回JSON信息，不太适应。
+			应该做到两种：一是返回JSON、二是跳转；
+			在BrowserProperties里面增加配置项loginType
+		同时修改:ImoocAuthenticationSuccessHandler 	从implements AuthenticationSuccessHandler ——> extends SavedRequestAwareAuthenticationSuccessHandler(SpringSecurity默认的成功处理器)
+			   ImoocAuthenticationFailureHandler	从implements AuthenticationFailureHandler ——> extends SimpleUrlAuthenticationFailureHandler(SpringSecurity默认的失败处理器)
+			并且加个 if(){原来的}else{} 判断
+			
+
+认证流程源码级详解(4-6 后面补上)
+	1、认证处理流程说明
+			↓ 登录请求
+		UsernamePasswordAuthenticationFilter
+			↓ Authentication(未认证)
+		AuthenticationManager:本身不包含认证逻辑，它的作用是为了管理AuthenticationProvider
+			↓
+		AuthenticationProvider:校验逻辑写在这个里面：DaoAuthenticationProvider,并且进行校验(第⑥步开始)
+			↓
+		UserDetailsService：DaoAuthenticationProvider.retrieveUser()方法里面拿到用户信息⑤，
+			↓
+		UserDetails → Authentication(已认证)
+		
+		【用户名和密码登录的说明：】
+			1、进入UsernamePasswordAuthenticationFilter.attemptAuthentication()方法，拿到用户名和密码；然后创建了一个①UsernamePasswordAuthenticationToken对象，
+			这个对象extends AbstractAuthenticationToken；进入到AbstractAuthenticationToken类中，它implements Authentication(这个接口封装了验证信息)；回到①，看构造方法
+			public UsernamePasswordAuthenticationToken(Object principal, Object credentials)
+		    {
+		        super(null);	// 调用父类的构造方法，因为现在还没有认证，不知道用户权限。
+		        this.principal = principal;
+		        this.credentials = credentials;
+		        setAuthenticated(false);	// 当前保存的用户名和密码 是没有经过认证的，所以是false
+		    }
+		   	 接到①的下一步：
+		   	 	②setDetails(request, authRequest); //将请求的信息设置到AbstractAuthenticationToken -》 UsernamePasswordAuthenticationToken中
+		   	 接到②的下一步：
+		   	 	return getAuthenticationManager().authenticate(authRequest);	// 去调AuthenticationManager的实现类③
+		   	 ③实现类为：ProviderManager.authenticate(Authentication authentication)
+		   	 	然后去遍历得到：为什么要遍历？因为不同的登录方式它的验证逻辑是不一样的(现在用的是UsernamePasswor登录，只需要去验证密码；如果是使用第三方认证，是不需要验证密码的)
+		   	 							SpringSecurity实际上提供了两个AuthenticationProvider，AuthenticationTManager负责把所有的AuthenticationProvider
+		   	 							收集起来，然后请求的时候，去循环他们 比对看当前的Provider是否支持这种方式登录。
+		   	 	 	Iterator iterator = getProviders().iterator();
+		   	 	 	do
+		   	 			AuthenticationProvider provider = (AuthenticationProvider)iterator.next();
+supports方法		   	 	if(!provider.supports(toTest)) // 问provider是否支持我传入进来的 Class toTest = authentication.getClass();类型。当前的类型是：UsernamePasswordAuthenticationToken,若是其他的验证方式会
+		   	 												调用SocialAuthenticationFilter过滤器——>④SocialAuthenticationFilter.doAuthentication()
+		   	 	④：success = getAuthenticationManager().authenticate(token); 
+		   	 		它传递的token是：SocialAuthenticationToken
+		   	 接到③的下一步：result = provider.authenticate(authentication);	// DaoAuthenticationProvider extends AbstractUserDetailsAuthenticationProvider
+	★★★★★★★	   	 ★进入到AbstractUserDetailsAuthenticationProvider.authenticate(Authentication authentication) 校验逻辑是写在这个抽象类(AbstractUserDetailsAuthenticationProvider)里面的
+		   	 			调用了： ③->⑥user = retrieveUser(username, (UsernamePasswordAuthenticationToken)authentication); // 获取到了	user对象(UserDetails)；retrieveUser方法是一个抽象方法
+		   	 					⑤DaoAuthenticationProvider实现了AbstractUserDetailsAuthenticationProvider的retrieveUser()抽象方法
+							   	⑤实现类里面：
+							   		// 调用我们提供的UserDetails接口的实现(MyUserDetailsService,这个类就是在这个地方被调用的，结果就是我们从数据库中取出的用户信息，被包装成UserDetails再返回)，然后来获取UserDetails
+							   		UserDetails loadedUser = getUserDetailsService().loadUserByUsername(username);	
+		   	③->⑥若没有拿到会抛出异常，拿到了继续往下执行
+		   	 	preAuthenticationChecks.check(user); //预检查AbstractUserDetailsAuthenticationProvider内部类⑦DefaultPreAuthenticationChecks.check(UserDetails user)			
+		   	⑦做了三个检查：用户是否锁定、用户账号是否过期、用户是否被禁用 (看上面UserDetails属性说明)
+		   	接到⑥的下一步：
+		   		additionalAuthenticationChecks(user, (UsernamePasswordAuthenticationToken)authentication); //附加的一个检查，抽象的方法，在DaoAuthenticationProvider中去实现
+		   			去校验密码是否匹配
+		   	⑥⑦都检查通过后：
+		   		⑧postAuthenticationChecks.check(user); // 后检查：AbstractUserDetailsAuthenticationProvider内部类DefaultPostAuthenticationChecks.check(UserDetails user)
+		   			是否已过期的用户的凭证(密码)
+		   	这些检查都通过，就认为用户认证是通过的就到⑨
+		   	⑨return createSuccessAuthentication(principalToReturn, authentication, user);
+		   		重新new UsernamePasswordAuthenticationToken：
+		   		UsernamePasswordAuthenticationToken result = new UsernamePasswordAuthenticationToken(principal, authentication.getCredentials(), authoritiesMapper.mapAuthorities(user.getAuthorities()));
+		   		调用(对比刚刚开始调用的两个参数的构造方法)：
+		   			public UsernamePasswordAuthenticationToken(Object principal, Object credentials, Collection authorities)
+				    {
+				        super(authorities);	// 设置用户权限
+				        this.principal = principal;
+				        this.credentials = credentials;
+				        super.setAuthenticated(true);	// 认证通过
+				    }
+			最后回到①，再往下
+				 ⑩return getAuthenticationManager().authenticate(authRequest);
+					进入到AbstractAuthenticationProcessingFilter.doFilter()里面
+						成功：
+							往下执行：successfulAuthentication(request, response, chain, authResult);
+								进入到successfulAuthentication中：
+									successHandler.onAuthenticationSuccess(request, response, authResult); //这里在调用我们自定义的登录成功的处理器
+						失败(不管之前在那步发了错误，都会到这里的catch)：
+							往下执行：unsuccessfulAuthentication(request, response, failed);
+								进入到unsuccessfulAuthentication中：
+									failureHandler.onAuthenticationFailure(request, response, failed);	//这里在调用我们自定义的登录失败的处理器
+							
+	2、认证结果如何在多个请求之间共享(session)
+		接到上面
+		Authentication(已认证)
+			↓
+		SecurityContext
+			↓
+		SecurityContextHolder 实际上是对ThreadLocal(理解)的封装，线程级的调用
+			↓
+		SecurityContextPersistenceFilter
+			说明：这个过滤器在之前讲的SpringSecurity基本原来那张图的最前面
+				作用：请求进来就会进入这个过滤器，最后响应返回的时候也会经过这个过滤器；
+					当请求进入的时候检查session里面是否有SecurityContext，如果有就把SecurityContext拿出来放到线程里面，如果没有就直接通过；当
+						整个请求响应后，检查线程里面是否有SecurityContext，就拿出来放到session里面。
+					这样的话不同的请求就可以在同一个session中拿到用户认证信息，拿到后放到线程里面；因为整个请求和响应的过程都是在同一个线程里面完成的。
+					只要在同一个线程里面就可以利用SecurityContextHolder拿到信息
+		
+		【说明：】
+			接到⑩步的成功上：
+				在调用successHandler.onAuthenticationSuccess(request, response, authResult);之前会调用
+					 // 实际上会把认证成功的Authentication放到SecurityContext里面:SecurityContextImpl
+					 SecurityContextHolder.getContext().setAuthentication(authResult);
+						SecurityContextImpl实际上包装了 private Authentication authentication; 重写了hashCode 和 equals来保证authentication的唯一性
+		
+	3、获取认证用户信息
+		在 UserController中增加一个服务
+		@GetMapping("/me")
+		public Object getCurrentUser() {
+			return SecurityContextHolder.getContext().getAuthentication();
+		}
+		
+		
+		
+
+实现图形验证码功能(因为验证码是公用的，所以写到：imooc-security-core中)
+	1、开发生成图形验证码接口	
+		新建ValidateCodeController
+		①、根据随机数生成图片
+		②、将随机数保存到Session中
+		③、将生成的图片写到接口的响应中
+		然后修改 标准登录界面imooc-signIn.html,添加下面的html元素
+			<tr>
+				<td>图形验证码</td>
+				<td>
+					<input type="text" name="imageCode">
+					<!-- 指向创建验证码服务 -->
+					<img src="/code/image">
+				</td>
+			</tr>
+		④、到这步生成验证码逻辑已经写好了，↓
+	2、在认证流程中加入图形验证码校验
+		①、BrowserSecurityConfig
+			因为这个验证码要在没有登录的时候去访问(在不需要认证就要能访问)，所以修改
+			.antMatchers("/authentication/require",
+						mySecurityProperties.getBrowser().getLoginPage()).permitAll()
+			为：
+			.antMatchers("/authentication/require",
+						mySecurityProperties.getBrowser().getLoginPage(),
+						"/code/image").permitAll()
+			这个时候页面已经存在图片验证码了，当点击提交会进入UsernamePasswordAuthenticationFilter过滤器，但是
+		这个过滤器并没有去实现图片验证码验证功能，因此要在这个过滤器之前(看SpringSecurity基本原理那张图)写一个自定义的过滤器
+		来处理验证功能，当在自定义过滤器里面验证通过再调用UsernamePasswordAuthenticationFilter过滤器，不通过就抛出异常
+		②、新建自定义过滤器
+			ValidateCodeFilter extends OncePerRequestFilter
+		③、在 BrowserSecurityConfig.configure() 中声明自定义的过滤器,并用定义的认证失败逻辑来处理验证码不正确
+			// 声明自定义的过滤器
+			ValidateCodeFilter validateCodeFilter = new ValidateCodeFilter();
+			// 将自己 自定义的失败处理程序 set进去
+			validateCodeFilter.setAuthenticationFailureHandler(imoocAuthenticationFailureHandler);
+		④、将自定义的过滤器 加到 UsernamePasswordAuthenticationFilter过滤器 之前
+			修改配置BrowserSecurityConfig
+				http
+					.addFilterBefore(validateCodeFilter, UsernamePasswordAuthenticationFilter.class)
+	3、重构代码
+		①、图片验证码基本参数可配置(验证码图片的长宽/产生随机数的位数/验证码过期时间)
+			
+			请求级配置		——	配置值在调用接口时传递(验证码图片的长宽存在请求级配置，其他不存在)
+				↓ 覆盖
+			应用级配置		——	配置值写在imooc-security-demo	在配置文件里面新增application.properties
+				↓ 覆盖
+			默认的配置(必须存在)	——	配置值写在imooc-security-core 新建ImageCodeProperties 包含在 ValidateCodeProperties 包含在 MySecurityProperties
+			
+			-->在图片验证码生成逻辑中去适配：ValidateCodeController.createImageCode()
+			[验证：已图片验证码的长度width为例] 
+				请求级配置： imooc-signIn.html 		——> <img src="/code/image?width=200">
+				应用级配置：application.properties ——> imooc.security.code.image.width = 100
+				默认的配置：ImageCodeProperties    ——> private int width = 67;
+			 然后运行看效果：然后再注释掉请求级配置 ；然后再注释掉应用级配置；去对比效果
+		②、图片验证码拦截的接口可配置
+			㈠、application.properties ——> imooc.security.code.image.url = /user,/user/* (可存在多个)
+			㈡、ValidateCodeFilter 增加一个urlSet属性(注意看注释)
+			㈢、修改ValidateCodeFilter.doFilterInternal()
+			㈣、修改BrowserSecurityConfig.configure()
+				// 将配置类 信息set进去 并且 调用初始化方法
+				validateCodeFilter.setMySecurityProperties(mySecurityProperties);
+				validateCodeFilter.afterPropertiesSet();
+				
+		③、验证码的生成逻辑可配置【重点理解 4-8重构】
+			想把 一段 逻辑做成可以配置，我们需要把这段逻辑封装到接口后面。像之前我们要写自己的处理成功/失败的逻辑，都是去实现接口再写自己的
+			㈠、新建接口：ValidateCodeGenerator
+				就是将原来ValidateCodeController.createImageCode()方法定义搬移进去
+			㈡、新建实现类去实现它
+				ImageCodeGenerator implements ValidateCodeGenerator
+					将ValidateCodeController.createImageCode()方法的实现，搬移进实现类
+			㈢、修改ValidateCodeController
+				@Autowired
+				private ValidateCodeGenerator imageCodeGenerator;
+				并且修改调用
+					ImageCode imageCode = imageCodeGenerator.createImageCode(request);
+			㈣、如何把接口的实现做成可配置的？
+				1、新建一个图片验证码的生成器 接口的配置类ValidateCodeBeanConfig
+					@Bean
+					@ConditionalOnMissingBean(name = "imageCodeGenerator")	// 重点理解这个注解的作用
+					public ValidateCodeGenerator imageCodeGenerator() {。。。}	
+				2、为了让这个配置生效，可以自己去创建一个名字叫"imageCodeGenerator"的bean，这样就不会去 找到默认的"imageCodeGenerator" Bean
+					在imooc-security-demo中创建一个实现类
+						@Component("imageCodeGenerator") // 必须写这个才会实现
+						DemoImageCodeGenerator implements ValidateCodeGenerator{
+							....
+							不去具体实现createImageCode这个逻辑，只打印一句话去验证效果
+						}
+			很重要的知识点-高级人员应该掌握的：【以增量的方式去适应变化】
+					解释：当出现变化的时候，如图形验证码的逻辑改变了，原来的逻辑不满足了；那么我处理的方式不是去改原来的代码，而是新加一段代码。
+			【@ConditionalOnMissingBean 这个注解★】		
+					
+实现"记住我"功能
+	1、记住我功能基本原理
+		看“项目笔记 第三大点的第一点的截图”
+	2、记住我功能具体实现
+		①、在登录界面 imooc-signIn.html 新增：
+			<tr>
+				<td colspan="2">
+					<input name="remember-me" type="checkbox" value="true">记住我 
+				</td>
+			</tr>
+		②、注释调DemoImageCodeGenerator的@Component("imageCodeGenerator")
+		③、在BrowserSecurityConfig中配置一个TokenRepository来去读写我们的数据库
+			@Bean
+			public PersistentTokenRepository persistentTokenRepository() {....}
+		④、设置Token过期的时间(记住我一般都有时间限制)：这个时间也作为配置项去实现
+			BrowserProperties里面增加rememberMeSeconds属性
+		⑤、增加BrowserSecurityConfig.configure()配置
+			.rememberMe()			//rememberMe的配置开始
+				.tokenRepository(persistentTokenRepository())	// 配置tokenRepository
+				.tokenValiditySeconds(mySecurityProperties.getBrowser().getRememberMeSeconds())     // 配置过期的秒数
+				.userDetailsService(userDetailsService)		// 拿到userDetailsService
+				.and()
+	3、记住我功能SpringSecurity源码解析(结合记住我基本原理那张图)
+		首次登录过程：
+			登录成功后进入到：AbstractAuthenticationProcessingFilter.doFilter()下的
+				 successfulAuthentication(request, response, chain, authResult);
+				 	 ①rememberMeServices.loginSuccess(request, response, authResult);
+			从①跟进去：
+				AbstractRememberMeServices.loginSuccess()
+					里面的：②onLoginSuccess(request, response, successfulAuthentication);
+			从②进去：
+				protected abstract void onLoginSuccess() //抽象方法，具体实现在③PersistentTokenBasedRememberMeServices		
+			③	.onLoginSuccess()方法里面
+					tokenRepository.createNewToken(persistentToken); //创建一个新的Token，存入数据库
+					addCookie(persistentToken, request, response); // 将生成出来的Token写到浏览器的Cookie里面
+		服务重启再次登录：
+			进入到：①RememberMeAuthenticationFilter.doFilter()里面
+				// 判断是否已经有一个Authentication了，前面的身份认证没有做，就是null
+				if(SecurityContextHolder.getContext().getAuthentication() == null){
+					// 进入到if里面
+					②Authentication rememberMeAuth = rememberMeServices.autoLogin(request, response);
+				}
+				②跟进去RememberMeServices：
+					进入到 它的实现类 AbstractRememberMeServices implements RememberMeServices 
+					在进入到继承它的PersistentTokenBasedRememberMeServices extends AbstractRememberMeServices
+				PersistentTokenBasedRememberMeServices.processAutoLoginCookie()
+					从请求中拿到：
+						String presentedSeries = cookieTokens[0];	//从Cookie中拿到Series值
+   						String presentedToken = cookieTokens[1];
+   						然后：再根据Series值从数据库中拿到Token	
+					 PersistentRememberMeToken token = tokenRepository.getTokenForSeries(presentedSeries);
+						若找不到就会抛出异常
+						拿到了会做一些判断：再processAutoLoginCookie()方法里面
+					都通过了会到：拿找到的的Token去调UserDetailsService
+						return getUserDetailsService().loadUserByUsername(token.getUsername());
+						然后回到①
+				接着①的方法：
+					// 将用户信息放到session里面
+					SecurityContextHolder.getContext().setAuthentication(rememberMeAuth);
+					再往下执行就到了目标服务了
+		
+		
+实现短信验证码登录
+	1、开发短信验证码接口(发短信)	
+		①、在ValidateCodeController新增
+			@GetMapping("/code/sms")
+			public void createSmsCode(HttpServletRequest request,HttpServletResponse response){..}
+		②、新建ValidateCode 验证码实体== 手机验证码实体
+			注意：ValidateCode 与 ImageCode 相差一个属性：ImageCode存在image，因此去重，ImageCode extends ValidateCode
+		③、修改ValidateCodeGenerator接口
+			ValidateCode generate(ServletWebRequest request);
+		④、封装一个短信验证码发送的接口
+			SmsCodeSender
+			再写一个默认实现：DefaultSmsCodeSender
+		⑤、同时去修改ValidateCodeBeanConfig，为了好让其他人来覆盖这个默认实现
+		⑥、在imooc-signIn.html新增
+			<form action="/authentication/mobile" method="post">
+				....
+			</form>
+		⑦、新建短信验证码生成器SmsCodeGenerator
+		⑧、新建手机短信配置类SmsCodeProperties
+			注意：SmsCodeProperties 与 ImageCodeProperties 相差二个属性：ImageCodeProperties存在width和height，因此去重，ImageCodeProperties extends SmsCodeProperties
+			图形验证码长度默认是4位，短信验证码 默认6位
+/**********************************************	上面涉及到imooc-security-core包的代码：都备份到iimooc-security-core优化前这个包下。下面出现的代码都是新的逻辑重构****************************************/		
+		现在来优化代码：
+			原代码逻辑：《iimooc-security-core优化前》  在这个包下
+				第一个要理解掌握的方法：ValidateCodeBeanConfig下的两个Bean
+		优化逻辑如下：
+			前提提要：《iimooc-security-core优化前》包下ValidateCodeController里面的两个请求
+				1 图片验证码   2 短信验证码
+			都是分为三步：1、创建 2、保存到session 3、发送/写Io
+				主干逻辑一样，只是有些步骤不同。像这样的代码一般会采用【模板方法将其抽象】然后重构代码
+				[模板方法抽象] / spring的依赖查找
+							  @Autowired
+							  private Map<String, ValidateCodeProcessor> validateCodeProcessors;
+				验证码处理器代码结构
+							ValidateCodeController(验证码的控制器)
+									¦	包含这个属性
+									∨
+							ValidateCodeProcessor(验证码处理器接口；它是处理整个验证码的生成流程的，包括生成、保存到session、发送；)
+									↑ 继承
+							AbstractValidateCodeProcessor(抽象类) --包含这个属性--> ValidateCodeGenerator(验证码的生成器)两个实现类(SmsCodeGenerator/ImageCodeGenerator)
+								抽象类：根据类型(image/sms/..)去调不同的验证码处理器
+								↑继承				↑继承
+					ImageCodeProcessor			SmsCodeProcessor --> SmsCodeSender
+					图片验证码处理器(写到响应里)		短信验证码处理器(发送)		发送需借助 发送器(根据不同的运营商有不同的实现)
+				[说明：]
+					生成器：根据不同的类型去生成不同的验证码
+					处理器：根据不同的类型去处理不同的验证码
+					ValidateCodeProcessor 和 ValidateCodeGenerator有一个分层的作用在里面，具体变化如下
+				[延申：]当整个验证码的生成流程发生了变化时，只需要重新去实现ValidateCodeProcessor接口(你可以将整个流程重写)；
+						如果你只是生成验证码的逻辑发生了变化(生成跟复杂的验证码等等，但是还是需要经过三步时)只需要实现ValidateCodeGenerator这个接口
+	2、校验短信验证码并登录
+		模拟上面【认证处理流程说明】的流程来创建一套自己的流程，具体流程看图片
+		①、新建SmsCodeAuthenticationToken
+		②、新建SmsCodeAuthenticationFilter
+		③、新建SmsCodeAuthenticationProvider
+		④、还差一个过滤器，在最前面验证手机短信验证码
+			它的逻辑跟之前的图片验证验证码过滤器ValidateCodeFilter是一样的，只是验证的URL不一样
+			图片验证码是："/authentication/form"    手机短信验证码是："/authentication/mobile"
+			新建：SmsCodeFilter
+		接下去就是添加配置：
+			⑤、手机验证码的配置：SmsCodeAuthenticationSecurityConfig
+		⑥、最后添加配置到 浏览器安全的配置BrowserSecurityConfig
+	3、重构代码
+			https://blog.csdn.net/newhanzhe/article/details/81267101
+			https://blog.csdn.net/mr_zhuqiang/article/details/81502354
+		①、消除重复的代码(将多次出现的字符串抽取为常量)
+		②、优化配置信息(按照类型来区分：如表单登录的配置、验证码的配置(无论是图片验证码/手机短信验证码))
+		总结：
+			善用 HttpSecurity.apply 应用分离之后的配置类
+			程序中有手动写字符串2次的就抽成 SecurityConstants 常量接口类
+			善用 Autowired注解提供的 依赖查找功能
+			善用枚举类 提供相应的支持
+		善用 类名统一起名 思想：		
+			ValidateCodeProcessor 验证码处理接口
+			ImageValidateCodeProcessor 图片验证码处理接口
+			SmsValidateCodeProcessor 短信验证码处理接口
+			在使用模板方法模式抽取公用逻辑的时候，可以使用前缀获取不同功能支持的动态常量等类容 
+			在外部要动态使用服务的时候，也能用前缀+具体的的父类命名获取到
+			如：这里的前缀，配合上面的技巧 善用 Autowired注解提供的 依赖查找功能，使用以下代码就能方便的获取到对应的处理器
+				// 他们都一个共同的父类，有公用的步骤，变化的部分由子类实现；
+				public abstract class AbstractValidateCodeProcessor<C extends ValidateCode> implements ValidateCodeProcessor {
+				  /**
+				   * 根据请求的url获取校验码的类型:
+				   * ValidateCodeProcessorHolder : 中持有所有本类的子类型，获取getClass能拿到具体的实例类名
+				   *		private Map<String, ValidateCodeProcessor> validateCodeProcessors;
+				   * @return
+				   * @see ValidateCodeProcessorHolder
+				   */
+				  private ValidateCodeType getValidateCodeType() {
+				      // 处理器 命名规则：ImageValidateCodeProcessor，拿到前缀即可
+				      // 返回 Image
+				      String type = StringUtils.substringBefore(getClass().getSimpleName(), ValidateCodeProcessor.class.getSimpleName());
+				      return ValidateCodeType.valueOf(type.toUpperCase());
+				  }
+					// 在外部使用 type + ValidateCodeProcessor.class.getSimpleName() 就能获取到完整的类名，也就能使用 ValidateCodeProcessorHolder动态的获取处理器了
+				}
+		
+小结：
+ 	1、要有重构的思想	
+ 		
+ 		
+ 		
+						
+		
