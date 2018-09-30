@@ -88,7 +88,7 @@ public class BrowserSecurityConfig extends AbstractChannelSecurityConfig  {
 				.and()
 			.apply(smsCodeAuthenticationSecurityConfig)	// 短信验证码【登录】的一些配置
 				.and()
-			.apply(imoocSocialSecurityConfig)	// 社交登录的配置
+			.apply(imoocSocialSecurityConfig)			// 社交登录的配置
 				.and()
 			.rememberMe()			// 浏览器特有的配置(记住我)
 				.tokenRepository(persistentTokenRepository())
