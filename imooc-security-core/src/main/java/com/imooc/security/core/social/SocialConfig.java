@@ -14,7 +14,6 @@ import org.springframework.social.connect.UsersConnectionRepository;
 import org.springframework.social.connect.jdbc.JdbcUsersConnectionRepository;
 import org.springframework.social.connect.web.ProviderSignInUtils;
 import org.springframework.social.security.SpringSocialConfigurer;
-import org.springframework.stereotype.Component;
 
 import com.imooc.security.core.properties.MySecurityProperties;
 
@@ -123,7 +122,8 @@ public class SocialConfig extends SocialConfigurerAdapter {
 		 * 	ConnectionFactoryLocator：它是原来定位connectionFactory，这个Spring Boot已经提供了；要么利用@Autowired注入，要么利用参数注入；
 		 * 	UsersConnectionRepository：调上面这个方法就可以了getUsersConnectionRepository()
 		 */
-		return new ProviderSignInUtils(connectionFactoryLocator, getUsersConnectionRepository(connectionFactoryLocator));
+		return new ProviderSignInUtils(connectionFactoryLocator,
+				getUsersConnectionRepository(connectionFactoryLocator)) {};
 	}
 	
 }

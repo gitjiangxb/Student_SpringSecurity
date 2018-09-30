@@ -1,6 +1,5 @@
 package com.imooc.security.core.social.qq.api;
 
-import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
