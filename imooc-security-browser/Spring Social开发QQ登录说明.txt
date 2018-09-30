@@ -339,6 +339,7 @@
 										// 添加这句
 										configurer.signupUrl(mySecurityProperties.getBrowser().getSignUpUrl());
 									}
+									
 							验证登录：http://www.pinzhi365.com/imooc-signIn.html，授权成功后跳转到“Demo 注册页”
 									目前只有简单的表单和按钮，
 								新的问题：
@@ -412,42 +413,42 @@
 							现在的处理流程是：第一次使用第三方登录时，强制跳转到“Demo 注册页”去注册，但是有的时候不希望跳到“Demo 注册页”；
 								就是QQ或者微信登录进去后，虽然是第一次登录；但是我也不要求你去“Demo 注册页”，而是偷偷的给你注册一个用户。
 								不需要让用户跳转到“Demo 注册页”，而是直接进入系统;这个如何实现？
-								回到[“/signup”问题的说明：]这个问题中，为什么会进入到注册页？回到它的第②步的toUserId()方法
-									跟到JdbcUsersConnectionRepository类的方法里面👇查询逻辑
-										 public List findUserIdsWithConnection(Connection connection)
-									    {
-									        ConnectionKey key = connection.getKey();
-									        List localUserIds = jdbcTemplate.queryForList(“去数据库里面查询的sql”);
-									        // 当在数据库查询的list为空 和 connectionSignUp这个接口不为空时进入
-									        if(localUserIds.size() == 0 && connectionSignUp != null)
-									        {
-									        	// connectionSignUp不为空时，调用它的 execute()方法，这个方法会返回一个 新用户的id
-									            String newUserId = connectionSignUp.execute(connection);	// ★重点
-									            // 新用户id 不为空
-									            if(newUserId != null)
-									            {
-									            	// 它会连同connection信息一起插入到数据库里面
-									                createConnectionRepository(newUserId).addConnection(connection);
-									                return Arrays.asList(new String[] {
-									                    newUserId
-									                });
-									            }
-									        }
-									        return localUserIds;
-									    }
+									回到[“/signup”问题的说明：]这个问题中，为什么会进入到注册页？回到它的第②步的toUserId()方法
+										跟到JdbcUsersConnectionRepository类的方法里面👇查询逻辑
+											 public List findUserIdsWithConnection(Connection connection)
+										    {
+										        ConnectionKey key = connection.getKey();
+										        List localUserIds = jdbcTemplate.queryForList(“去数据库里面查询的sql”);
+										        // 当在数据库查询的list为空 和 connectionSignUp这个接口不为空时进入
+										        if(localUserIds.size() == 0 && connectionSignUp != null)
+										        {
+										        	// connectionSignUp不为空时，调用它的 execute()方法，这个方法会返回一个 新用户的id
+										            String newUserId = connectionSignUp.execute(connection);	// ★重点
+										            // 新用户id 不为空
+										            if(newUserId != null)
+										            {
+										            	// 它会连同connection信息一起插入到数据库里面
+										                createConnectionRepository(newUserId).addConnection(connection);
+										                return Arrays.asList(new String[] {
+										                    newUserId
+										                });
+										            }
+										        }
+										        return localUserIds;
+										    }
 									看懂上面这段代码后： 
 										现在要的事情就是要在JdbcUsersConnectionRepository里面添加一个connectionSignUp这个接口的实现，给他赋上值就可以了
 										新建：在imooc-security-demo项目中 创建DemoConnectionSignUp
 											@Component
 											public class DemoConnectionSignUp implements ConnectionSignUp {
+												// 并重写execute()方法即可
 												@Override
 												public String execute(Connection<?> connection) {
 													// TODO 根据社交用户信息(connection)默认创建用户并返回用户的唯一标识;这里拿昵称为用户的唯一标识，真实的逻辑根据任务来做
 													return connection.getDisplayName();
 												}
-											
 											}
-										然后在Social的配置类里面做修改：SocialConfig
+										然后在Social的配置类里面做修改：SocialConfig 【至于为什么在这个配置类里面做修改，回到上面 开发QQ登录 的 第9步】
 											第一步：先注入
 												@Autowired(required = false)
 												private ConnectionSignUp connectionSignUp;
@@ -455,10 +456,12 @@
 												if(connectionSignUp != null) {
 													repository.setConnectionSignUp(connectionSignUp);
 												}
-										做完这些配置后，就不会管你是否是第一次使用社交软件登录；若是，则会默认注册一个用户
+										做完这些配置后，就不会管你是否是第一次使用社交软件登录；若是，则会默认注册一个用户。
+											为了测试出效果：可以将DemoConnectionSignUp类上面的注解@Component注释调
 					
 					
-					
+最后测试存在的问题：
+	QQ可以授权登录到注册界面，注册成功后，库里面存在一条数据，但是却没有认证成功。没有执行MyUserDetailsService.loadUserByUserId()方法		
 					
 					
 					
