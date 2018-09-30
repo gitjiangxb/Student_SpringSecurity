@@ -82,6 +82,8 @@ public class MyUserDetailsService implements UserDetailsService,SocialUserDetail
 		 * 利用passwordEncoder.encode()加的密，每次都不一样，但是用户都可以登录；因为它密码里面有”盐值“，虽然
 		 * 	保存到数据库里面的跟你此时此刻输入的不一样，但是SpringSecurity会拿你保存的密码的”盐值“进行反推，从而匹配。
 		 * 	这样做的好处：如所有人的密码都一样(123456),但是经过encode后都不一样。
+		 * 
+		 * 目前是写死一个密码，赋予一个admin权限
 		 */
 //		String password = passwordEncoder.encode("123456");
 //		logger.info("数据库密码是：" + password);

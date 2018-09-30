@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
  * @author:Jiangxb
  * @date:2018年9月29日 下午3:13:58
  * 当社交软件第一次登录时，直接跳转到登录成功页面，不需要经过“Demo 注册页”
+ * 	重写ConnectionSignUp接口的execute()方法即可
  */
 @Component
 public class DemoConnectionSignUp implements ConnectionSignUp {
