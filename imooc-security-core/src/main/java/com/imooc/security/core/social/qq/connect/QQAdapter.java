@@ -23,7 +23,8 @@ public class QQAdapter implements ApiAdapter<QQ> {
 	@Override
 	public UserProfile fetchUserProfile(QQ api) {
 		
-		return UserProfile.EMPTY;
+//		return UserProfile.EMPTY;
+		return null;
 	}
 
 	/**

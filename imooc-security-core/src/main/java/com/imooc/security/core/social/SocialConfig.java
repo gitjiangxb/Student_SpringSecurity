@@ -44,6 +44,7 @@ public class SocialConfig extends SocialConfigurerAdapter {
 	
 	/**
 	 * @Fields:connectionSignUp : TODO 注入用户信息注册接口
+	 * required = false 说明这个接口不一定每个系统都会实现
 	 */
 	@Autowired(required = false)
 	private ConnectionSignUp connectionSignUp;
