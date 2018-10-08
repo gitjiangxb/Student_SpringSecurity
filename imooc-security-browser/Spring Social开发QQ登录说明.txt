@@ -461,7 +461,12 @@
 					
 					
 最后测试存在的问题：
-	QQ可以授权登录到注册界面，注册成功后，库里面存在一条数据，但是却没有认证成功。没有执行MyUserDetailsService.loadUserByUserId()方法		
+	输入：http://www.merryyou.cn/imooc-signIn.html
+	QQ可以授权登录到注册界面，注册成功后，库里面存在一条数据，但是却没有认证成功。没有执行MyUserDetailsService.loadUserByUserId()方法
+	断点调试：
+		OAuth2AuthenticationService.getAuthToken() 下 accessGrant是否拿到
+		SocialAuthenticationProvider.authenticate() 下userId是否拿到，会去JdbcUsersConnectionRepository.findUserIdsWithConnection()去查数据库
+					
 					
 					
 					

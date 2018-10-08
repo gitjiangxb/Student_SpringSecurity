@@ -8,6 +8,8 @@ import javax.validation.Valid;
 
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -207,6 +209,8 @@ import io.swagger.annotations.ApiParam;
 @RequestMapping("/user")
 public class UserController {
 	
+	private Logger logger = LoggerFactory.getLogger(getClass());
+	
 	/**
 	 * @Fields:providerSignInUtils : TODO 注入获取用户信息工具类
 	 */
@@ -226,6 +230,7 @@ public class UserController {
 		// 不管注册用户 还是绑定用户，都会拿到一个用户唯一标识
 		String userId = user.getUsername();	// 让填写的用户名作为唯一标识
 		
+		logger.info("(注册/绑定)用户唯一标识：" + userId);
 		/**
 		 * 这里不去写注册流程，这里只处理将userId传递给Spring Social，
 		 * 	然后Spring Social拿到这个userId后，跟它之前拿到的社交用户的信息
