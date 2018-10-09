@@ -1,0 +1,33 @@
+	前端		— RESTful —>		      后端
+	Vue							SpringBoot
+	 |								|
+	WebApp					Bootstrap+Freemarker+JQuery
+	
+	
+						SpringBoot
+	数据库方面					缓存方面			消息推送方面
+	
+	SpringBoot + JPA	SpringBoot+Redis		WebSocket
+			|						 |
+	SpringBoot+MyBatis		分布式Session  分布式锁			
+	
+微信相关的技术：
+	微信扫码登录、模板消息推送、微信支付和退款
+	
+数据库表：
+	
+	类目表(product_category)		订单主表(order_master)
+			↓								↑				卖家信息表(seller_info)
+	商品表(product_info)		→	订单需求表(order_detail)
+
+前端课程：
+	Vue.js高仿饿了么外卖App 1.0到2.0版本完美升级
+	
+	
+	
+Logger的配置方式	
+	application.yml
+	logback-spring.xml
+	
+	
+	

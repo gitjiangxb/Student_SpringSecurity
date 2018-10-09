@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<configuration>
+	<!-- 配置项1 ——控制台的输出 -->
+    <appender name="consoleLog" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- 展示的效果 -->
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>
+                <!-- %d - %msg%n -->
+                %d %-5level 【%logger】 Line:%-3L - %msg%n
+            </pattern>
+        </layout>
+    </appender>
+
+	<!-- 配置项2 ——日志信息输出文件(每天一个日志文件)-->
+    <appender name="fileInfoLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    	<!-- 根据范围来过滤 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>DENY</onMatch>
+            <onMismatch>ACCEPT</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>
+                <!-- %msg%n -->
+                %d %-5level 【%logger】 Line:%-3L - %msg%n
+            </pattern>
+        </encoder>
+        <!--滚动策略-->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--路径-->
+            <fileNamePattern>/var/log/tomcat/sell/info.%d.log</fileNamePattern>
+        </rollingPolicy>
+    </appender>
+
+	<!-- 配置项3 ——错误日志输出文件-->
+    <appender name="fileErrorLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    	<!-- 根据范围来过滤 -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>	<!-- 只输出  错误日志-->
+        </filter>
+        <encoder>
+            <pattern>
+                <!-- %msg%n -->
+                %d %-5level 【%logger】 Line:%-3L - %msg%n
+            </pattern>
+        </encoder>
+        <!--滚动策略-->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--路径-->
+            <fileNamePattern>/var/log/tomcat/sell/error.%d.log</fileNamePattern>
+        </rollingPolicy>
+    </appender>
+ 
+ 	<!-- 将配置项 用到root下(整个项目都适用)，并设置级别 -->
+    <root level="info">
+        <appender-ref ref="consoleLog" />
+        <appender-ref ref="fileInfoLog" />
+        <appender-ref ref="fileErrorLog" />
+    </root>
+
+</configuration>

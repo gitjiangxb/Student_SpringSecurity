@@ -64,6 +64,7 @@ public abstract class AbstractValidateCodeProcessor<C extends ValidateCode> impl
 	@Override
 	public void create(ServletWebRequest request) throws Exception {
 		System.out.println("测试自定义配置文件：" + componentProperties.toString());
+		logger.info(validateCodeGenerators.toString());
 		// 第一步：创建/生成验证码（generate()涉及到spring的依赖查找功能）
 		C validateCode = generate(request);
 		// 第二步：保存验证码到Session
@@ -178,7 +179,8 @@ public abstract class AbstractValidateCodeProcessor<C extends ValidateCode> impl
 	/**
 	 * @Title:getValidateCodeType
 	 * @Description:TODO 根据请求的url获取校验码的类型
-	 * @param request
+	 * @p
+	 * .aram request
 	 * @return:ValidateCodeType
 	 * @author:Jiangxb
 	 * @date: 2018年9月17日 上午10:53:01
